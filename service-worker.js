@@ -1,4 +1,4 @@
-const CACHE_NAME = 'codex-mindmap-ios-v13-20260621';
+const CACHE_NAME = 'codex-mindmap-ios-v14-20260621';
 const APP_SHELL = [
   './',
   './index.html',
