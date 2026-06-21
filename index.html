@@ -1,0 +1,966 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#ffffff" />
+<meta name="color-scheme" content="light" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Codex 总图" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="format-detection" content="telephone=no" />
+<meta name="description" content="Codex 使用、规划、安全、容器与远程开发的交互式速查导图。" />
+<title>Codex 专业工作总图</title>
+<style>
+  :root{
+    --bg:#ffffff; --surface:#ffffff; --surface-soft:#f6f6f6; --surface-hover:#eeeeee;
+    --text:#000000; --muted:#333333; --line:#111111; --line-soft:#777777;
+    --focus:#000000; --fade:#b7b7b7; --shadow:0 8px 18px rgba(0,0,0,.10); --radius:12px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--text);font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+  button,input{font:inherit}
+  .app{height:100%;display:grid;grid-template-columns:1fr 380px;grid-template-rows:76px 1fr;background:#fff}
+  header{grid-column:1/-1;display:flex;align-items:center;gap:18px;padding:14px 20px;border-bottom:2px solid var(--line);background:#fff;z-index:20}
+  .brand{min-width:300px}.eyebrow{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#333;font-weight:700;margin-bottom:3px}.brand h1{font-size:18px;margin:0;font-weight:850;letter-spacing:.01em}.brand h1 span{font-weight:650}
+  .header-note{font-size:12px;color:#222;line-height:1.45;max-width:560px}.header-note b{font-weight:850}
+  .search-wrap{margin-left:auto;position:relative;width:min(350px,34vw)}
+  #search{width:100%;height:40px;padding:0 36px 0 38px;border-radius:9px;border:1.5px solid #111;background:#fff;color:#000;outline:none;transition:.16s}
+  #search:focus{border-width:2px;box-shadow:0 0 0 3px #dedede}.search-icon{position:absolute;left:13px;top:10px;color:#000;font-weight:800}.kbd{position:absolute;right:9px;top:9px;font-size:11px;padding:3px 6px;border:1px solid #222;border-radius:5px;color:#000;background:#fff}
+  .canvas-wrap{position:relative;overflow:hidden;min-width:0;cursor:grab;background:#fff}.canvas-wrap.dragging{cursor:grabbing}.canvas-wrap::before{content:"";position:absolute;inset:0;background-image:radial-gradient(circle at 1px 1px,#c9c9c9 1px,transparent 1.2px);background-size:26px 26px;opacity:.55;pointer-events:none}
+  #viewport{position:absolute;inset:0;overflow:hidden}.world{position:absolute;left:50%;top:50%;width:1px;height:1px;transform-origin:0 0;transition:transform .34s cubic-bezier(.2,.75,.25,1)}.canvas-wrap.dragging .world{transition:none}.edges{position:absolute;left:-5000px;top:-5000px;width:10000px;height:10000px;overflow:visible;pointer-events:none}.edge{fill:none;stroke:var(--line);stroke-width:2.5;opacity:.95;stroke-linecap:round;transition:.18s}.edge.depth-1{stroke-width:3.6}.edge.depth-2{stroke-width:2.7}.edge.depth-3,.edge.depth-4,.edge.depth-5{stroke-width:2.1;stroke-dasharray:8 5}.edge.active{stroke:#000;stroke-width:4.6;opacity:1}.edge.dim{opacity:.18}.controls{position:absolute;left:0;top:0;width:1px;height:1px;overflow:visible;pointer-events:none}.toggle-chip{position:absolute;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:999px;border:2px solid #000;background:#fff;color:#000;font-size:14px;line-height:1;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 0 rgba(0,0,0,.12);cursor:pointer;pointer-events:auto;z-index:4}.toggle-chip:hover{background:#000;color:#fff}.toggle-chip.dim{opacity:.35}
+  .node{position:absolute;width:170px;min-height:50px;padding:12px 13px;border-radius:10px;border:1.9px dashed #111;background:#fff;box-shadow:0 3px 0 rgba(0,0,0,.08);transform:translate(-50%,-50%);cursor:pointer;user-select:none;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease,opacity .16s,background .16s;z-index:2}
+  .node.branch{border-style:solid}.node.leaf{border-style:dashed}
+  .node:hover{transform:translate(-50%,-50%) translateY(-3px) scale(1.028);border-width:2.4px;box-shadow:0 6px 0 rgba(0,0,0,.13)}
+  .node.selected{z-index:5;opacity:1;border:3px solid #000;background:#fff;box-shadow:0 0 0 5px #dedede,0 8px 0 rgba(0,0,0,.17);transform:translate(-50%,-50%) scale(1.12)}
+  .node.selected:hover{transform:translate(-50%,-50%) translateY(-2px) scale(1.125)}
+  .node.dim{opacity:.2}.node.hidden{display:none}
+  .node.root{width:220px;min-height:76px;padding:14px 16px;text-align:center;border-radius:13px;border:4px solid #000;background:#fff;box-shadow:0 5px 0 rgba(0,0,0,.12)}
+  .node.top{width:194px;border:3px solid #000;background:#fff}.node.top .title{font-weight:840}
+  .node .title{font-size:13px;line-height:1.3;font-weight:740}.root .title{font-size:17px;font-weight:900}.node .sub{font-size:10px;line-height:1.45;color:#333;margin-top:4px;font-weight:520}
+  .toolbar{position:absolute;left:16px;bottom:18px;display:flex;gap:7px;padding:7px;border:1.5px solid #111;border-radius:11px;background:#fff;box-shadow:var(--shadow);z-index:10}.toolbtn{height:34px;min-width:34px;border:1px solid transparent;border-radius:7px;color:#000;background:#fff;cursor:pointer;font-size:14px;font-weight:750;transition:.15s}.toolbtn:hover{border-color:#000;background:#f0f0f0}.toolbtn.primary{padding:0 11px;border-color:#000;background:#000;color:#fff;font-weight:760}.toolbtn.primary:hover{background:#222}
+  .legend{position:absolute;right:16px;bottom:18px;display:flex;align-items:center;gap:10px;font-size:11px;color:#222;padding:8px 11px;border-radius:9px;background:#fff;border:1.2px solid #222;z-index:8}.legend i{width:8px;height:8px;border-radius:50%;background:#000;display:inline-block}.legend b{color:#000;font-weight:850}
+  aside{grid-column:2;grid-row:2;border-left:2px solid #111;background:#fff;padding:18px;overflow:auto;z-index:12}.app.sidebar-closed{grid-template-columns:1fr}.app.sidebar-closed aside{display:none}.panel-head{display:grid;gap:10px;border-bottom:1.5px solid #111;padding-bottom:14px;margin-bottom:15px}.panel-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px}.panel-head h2{font-size:14px;margin:0;font-weight:850}.sidebar-controls{display:grid;grid-template-columns:1fr 1.25fr;gap:7px}.sidebar-mode-btn{border:1.35px solid #111;border-radius:8px;background:#fff;color:#000;padding:8px 9px;cursor:pointer;font-size:11px;font-weight:800;line-height:1.2}.sidebar-mode-btn:hover{background:#f0f0f0}.sidebar-mode-btn.active{background:#000;color:#fff}.sidebar-mode-btn.close:hover{background:#000;color:#fff}.sidebar-reopen{display:none;position:absolute;right:16px;top:16px;z-index:11;border:1.5px solid #111;border-radius:9px;background:#fff;color:#000;padding:9px 12px;cursor:pointer;font-size:12px;font-weight:850;box-shadow:var(--shadow)}.sidebar-reopen:hover{background:#000;color:#fff}.app.sidebar-closed .sidebar-reopen{display:block}.status{font-size:10px;padding:4px 7px;border:1px solid #000;background:#fff;color:#000;border-radius:999px;font-weight:760}.empty{color:#222;font-size:13px;line-height:1.7;padding:10px 0}.crumb{font-size:11px;color:#333;line-height:1.55;margin-bottom:10px;font-weight:650}.detail-title{font-size:20px;line-height:1.25;margin:0 0 8px;letter-spacing:.01em;font-weight:900}.detail-summary{font-size:13px;color:#111;line-height:1.7;margin:0 0 15px;font-weight:520}.detail-section{margin:16px 0}.section-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 8px}.detail-section h3{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#000;margin:0;font-weight:850}.detail-section p{font-size:12px;color:#111;line-height:1.7;margin:0}.steps{margin:0;padding-left:20px;color:#000}.steps li{font-size:12px;line-height:1.65;margin:7px 0;padding-left:2px}.step-row{display:flex;align-items:flex-start;gap:8px}.step-text{flex:1;min-width:0}.step-copy,.section-copy{flex:none;border:1px solid #111;background:#fff;color:#000;border-radius:6px;padding:3px 6px;font-size:10px;line-height:1.2;cursor:pointer;font-weight:750}.step-copy:hover,.section-copy:hover{background:#000;color:#fff}.section-copy{padding:5px 8px}.prompt-stack{display:grid;gap:10px}.prompt-card{position:relative;padding:31px 58px 13px 13px;border-radius:9px;border:1.5px solid #111;background:#fafafa;color:#000;font-family:"Cascadia Code","SFMono-Regular",Consolas,monospace;font-size:11px;line-height:1.7;white-space:pre-wrap}.prompt-label{position:absolute;left:12px;top:9px;font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;font-size:10px;letter-spacing:.05em;font-weight:850;color:#000}.copy{position:absolute;right:8px;top:8px;border:1px solid #111;background:#fff;color:#000;border-radius:6px;padding:4px 7px;font-size:10px;cursor:pointer;font-weight:760}.copy:hover{background:#000;color:#fff}.tip{padding:10px 11px;border-radius:8px;background:#f4f4f4;border:1.5px solid #111;color:#000;font-size:12px;line-height:1.6}.tip b{font-weight:900}.sources{display:grid;gap:8px}.source-link{display:block;padding:9px 10px;border:1.3px solid #111;border-radius:8px;background:#fff;color:#000;text-decoration:none;line-height:1.5}.source-link:hover{background:#000;color:#fff}.source-link b{display:block;font-size:12px;font-weight:850}.source-link span{display:block;font-size:10px;opacity:.82;margin-top:2px}.examples{display:grid;gap:10px}.example-card{padding:10px 11px;border-radius:8px;background:#fafafa;border:1.4px solid #111}.example-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}.example-title{font-size:12px;font-weight:850;color:#000}.example-body{font-size:12px;line-height:1.65;color:#111}.mini-actions{display:flex;gap:8px;margin-top:16px}.mini-actions button{flex:1;border:1.2px solid #111;background:#fff;color:#000;border-radius:8px;padding:8px;cursor:pointer;font-size:11px;font-weight:740}.mini-actions button:hover{background:#000;color:#fff}
+  .tooltip{position:fixed;z-index:100;max-width:310px;opacity:0;pointer-events:none;transform:translateY(5px);transition:opacity .18s,transform .18s;background:#fff;color:#000;border:1.7px solid #000;border-radius:9px;padding:12px 13px;box-shadow:0 8px 0 rgba(0,0,0,.13);font-size:12px;line-height:1.62}.tooltip.show{opacity:1;transform:translateY(0)}.tooltip .tt-title{font-weight:900;font-size:12px;margin-bottom:4px;color:#000}.tooltip .tt-label{display:inline-block;font-size:9px;letter-spacing:.08em;font-weight:850;color:#000;margin-bottom:4px}.tooltip b{font-weight:900}.toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);padding:9px 12px;border:1.5px solid #000;border-radius:8px;background:#fff;color:#000;font-size:12px;font-weight:800;opacity:0;transition:.2s;z-index:110;box-shadow:0 6px 0 rgba(0,0,0,.12)}.toast.show{opacity:1;transform:translate(-50%,0)}
+  .help{position:absolute;left:17px;top:16px;z-index:8;width:225px;padding:10px 12px;border:1.4px solid #111;border-left:4px solid #000;border-radius:0 9px 9px 0;background:#fff;font-size:11px;color:#111;line-height:1.58;box-shadow:0 4px 0 rgba(0,0,0,.07)}.help strong{color:#000;font-weight:900}
+  .search-results{position:absolute;top:45px;left:0;right:0;border:1.5px solid #111;border-radius:9px;background:#fff;box-shadow:var(--shadow);overflow:hidden;display:none;z-index:30}.search-results.show{display:block}.result{padding:10px 12px;cursor:pointer;font-size:12px;color:#000;border-bottom:1px solid #d2d2d2}.result:last-child{border-bottom:none}.result:hover{background:#000;color:#fff}.result span{font-weight:850}
+  @media(max-width:900px){.app{grid-template-columns:1fr;grid-template-rows:66px 1fr}.brand{min-width:0}.header-note{display:none}header{grid-column:1/-1;padding:10px 12px}.brand h1{font-size:15px}.search-wrap{width:min(48vw,270px)}aside{display:block;position:fixed;top:66px;right:0;bottom:0;width:min(380px,92vw);border-left:2px solid #111;box-shadow:-8px 0 18px rgba(0,0,0,.12)}.app.sidebar-closed aside{display:none}.legend{display:none}.node{width:145px}.node.top{width:158px}.node.root{width:190px}.help{display:none}.sidebar-reopen{top:12px;right:12px}}
+  @media print{
+    @page{size:landscape;margin:8mm}
+    html,body{height:auto;overflow:visible;background:#fff;color:#000}
+    .app{height:auto;min-height:180mm;grid-template-columns:1fr 82mm;grid-template-rows:18mm 162mm}
+    header{padding:4mm 5mm;border-bottom:1.5px solid #000}.header-note,.search-wrap{display:none}
+    .canvas-wrap{height:162mm;overflow:hidden}.toolbar,.help,.legend,.tooltip,.toast,.controls,.sidebar-reopen{display:none!important}
+    aside{padding:4mm;border-left:1.5px solid #000}.panel-head{padding-bottom:3mm;margin-bottom:3mm}
+    .node.dim,.edge.dim{opacity:1}.world{transition:none!important}
+    .node{box-shadow:none}.node.selected{box-shadow:none}.canvas-wrap::before{opacity:.22}
+  }
+
+  /* v9 · Canvas-first layout: wider sidebar + selection-chain auto-fit */
+  .app{grid-template-columns:1fr 741px;grid-template-rows:1fr}
+  aside{grid-column:2;grid-row:1;padding:27px}
+  .app.sidebar-closed{grid-template-columns:1fr}
+
+  .search-wrap.search-in-canvas{margin:0;position:absolute;right:16px;bottom:18px;width:min(360px,calc(100% - 32px));z-index:12}
+  .search-wrap.search-in-canvas #search{height:42px;padding:0 36px 0 38px;background:#fff;box-shadow:var(--shadow)}
+  .search-wrap.search-in-canvas .search-icon{top:11px}
+  .search-wrap.search-in-canvas .kbd{top:10px}
+  .search-wrap.search-in-canvas .search-results{top:auto;bottom:49px;max-height:min(46vh,420px);overflow:auto}
+
+  /* Sidebar typography at 150% of the former desktop scale */
+  .panel-head{gap:15px;padding-bottom:21px;margin-bottom:23px}
+  .panel-title-row{gap:15px}
+  .panel-head h2{font-size:21px}
+  .sidebar-controls{gap:11px}
+  .sidebar-mode-btn{border-width:2px;border-radius:10px;padding:12px 14px;font-size:16.5px}
+  .status{font-size:15px;padding:6px 10px}
+  .empty{font-size:19.5px;line-height:1.7;padding:15px 0}
+  .crumb{font-size:16.5px;line-height:1.55;margin-bottom:15px}
+  .detail-title{font-size:30px;line-height:1.25;margin:0 0 12px}
+  .detail-summary{font-size:19.5px;line-height:1.7;margin:0 0 23px}
+  .detail-section{margin:24px 0}
+  .section-title-row{gap:15px;margin:0 0 12px}
+  .detail-section h3{font-size:16.5px}
+  .detail-section p{font-size:18px}
+  .steps{padding-left:30px}
+  .steps li{font-size:18px;line-height:1.65;margin:11px 0;padding-left:3px}
+  .step-row{gap:12px}
+  .step-copy,.section-copy{border-width:1.5px;border-radius:8px;padding:5px 9px;font-size:15px}
+  .section-copy{padding:8px 12px}
+  .prompt-stack{gap:15px}
+  .prompt-card{padding:47px 87px 20px 20px;border-width:2px;border-radius:11px;font-size:16.5px;line-height:1.7}
+  .prompt-label{left:18px;top:14px;font-size:15px}
+  .copy{right:12px;top:12px;border-width:1.5px;border-radius:8px;padding:6px 10px;font-size:15px}
+  .tip{padding:15px 17px;border-width:2px;border-radius:10px;font-size:18px;line-height:1.6}
+  .sources{gap:12px}
+  .source-link{padding:14px 15px;border-width:1.8px;border-radius:10px;line-height:1.5}
+  .source-link b{font-size:18px}
+  .source-link span{font-size:15px;margin-top:3px}
+  .examples{gap:15px}
+  .example-card{padding:15px 17px;border-width:1.8px;border-radius:10px}
+  .example-head{gap:15px;margin-bottom:9px}
+  .example-title{font-size:18px}
+  .example-body{font-size:18px;line-height:1.65}
+  .mini-actions{gap:12px;margin-top:24px}
+  .mini-actions button{border-width:1.8px;border-radius:10px;padding:12px;font-size:16.5px}
+
+  @media(max-width:900px){
+    .app{grid-template-columns:1fr;grid-template-rows:1fr}
+    aside{display:block;position:fixed;top:0;right:0;bottom:0;width:min(741px,92vw);padding:20px;border-left:2px solid #111;box-shadow:-8px 0 18px rgba(0,0,0,.12)}
+    .app.sidebar-closed aside{display:none}
+    .search-wrap.search-in-canvas{width:min(360px,calc(100vw - 32px));right:16px;bottom:16px}
+    .sidebar-reopen{top:12px;right:12px}
+  }
+  @media print{
+    .app{height:auto;min-height:162mm;grid-template-columns:1fr 82mm;grid-template-rows:162mm}
+    aside{grid-row:1;padding:4mm}
+    .search-wrap.search-in-canvas{display:none!important}
+  }
+
+
+  /* v10 · clean canvas controls */
+  .help{display:none!important}
+  .sidebar-reopen{display:none!important}
+  .panel-head{display:none!important}
+  .sidebar-toggle{position:absolute;right:14px;top:14px;z-index:15;width:38px;height:34px;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:5px;padding:7px 8px;border:1.5px solid transparent;border-radius:8px;background:#fff;color:#000;cursor:pointer;box-shadow:none;transition:background .15s,border-color .15s,transform .15s}
+  .sidebar-toggle:hover{border-color:#111;background:#f3f3f3;transform:translateY(-1px)}
+  .sidebar-toggle:focus-visible{outline:3px solid #cfcfcf;outline-offset:2px}
+  .sidebar-toggle span{display:block;height:2px;background:#000;border-radius:999px}
+  .sidebar-toggle span:nth-child(1){width:21px}
+  .sidebar-toggle span:nth-child(2){width:15px}
+  .sidebar-toggle span:nth-child(3){width:9px}
+  .search-wrap.search-in-canvas{left:50%;right:auto;bottom:18px;transform:translateX(-50%);width:min(480px,calc(100% - 300px))}
+  @media(max-width:900px){
+    .sidebar-toggle{right:12px;top:12px}
+    .search-wrap.search-in-canvas{left:50%;right:auto;bottom:64px;transform:translateX(-50%);width:min(460px,calc(100% - 32px))}
+  }
+  @media print{.sidebar-toggle{display:none!important}}
+
+
+
+  /* v11 · glossary annotations, top-left search, wider professional sidebar */
+  .app{grid-template-columns:1fr 963px}
+  aside{grid-column:2;grid-row:1;width:963px;max-width:963px}
+  #viewport{z-index:2}
+  .search-wrap.search-in-canvas{left:18px;right:auto;top:16px;bottom:auto;transform:none;width:min(450px,calc(100% - 310px));z-index:12}
+  .search-wrap.search-in-canvas.ui-obscured,.toolbar.ui-obscured{z-index:1!important;opacity:.25;filter:grayscale(1) contrast(.65);pointer-events:none;box-shadow:none}
+  .search-wrap.search-in-canvas.ui-obscured #search,.toolbar.ui-obscured{background:#f4f4f4}
+  .search-wrap.search-in-canvas.ui-obscured .search-results{display:none!important}
+  .term-token{display:inline;border-bottom:1.5px dashed #000;color:#000;font-weight:780;cursor:help;text-decoration:none;outline:none;border-radius:2px;transition:background .15s,color .15s}
+  .term-token:hover,.term-token:focus-visible{background:#000;color:#fff;border-bottom-color:#000;cursor:pointer}
+  .annotation-popover{position:fixed;z-index:1000;width:min(440px,calc(100vw - 24px));max-height:min(72vh,620px);overflow:auto;opacity:0;visibility:hidden;pointer-events:none;transform:translateY(6px);transition:opacity .16s ease,transform .16s ease;background:#fff;color:#000;border:2px solid #000;border-radius:12px;padding:16px 18px;box-shadow:0 9px 0 rgba(0,0,0,.16);font-size:15px;line-height:1.62}
+  .annotation-popover.show{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0)}
+  .annotation-popover::before{content:"";position:absolute;width:15px;height:15px;background:#fff;z-index:-1}
+  .annotation-popover[data-placement="right"]::before{left:-9px;top:var(--arrow-y,30px);border-left:2px solid #000;border-bottom:2px solid #000;transform:translateY(-50%) rotate(45deg)}
+  .annotation-popover[data-placement="left"]::before{right:-9px;top:var(--arrow-y,30px);border-right:2px solid #000;border-top:2px solid #000;transform:translateY(-50%) rotate(45deg)}
+  .annotation-popover[data-placement="bottom"]::before{top:-9px;left:var(--arrow-x,30px);border-left:2px solid #000;border-top:2px solid #000;transform:translateX(-50%) rotate(45deg)}
+  .annotation-popover[data-placement="top"]::before{bottom:-9px;left:var(--arrow-x,30px);border-right:2px solid #000;border-bottom:2px solid #000;transform:translateX(-50%) rotate(45deg)}
+  .annotation-kicker{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px;color:#000}
+  .annotation-title{margin:0 0 11px;font-size:19px;line-height:1.3;font-weight:900}.annotation-title code{font-family:"Cascadia Code","SFMono-Regular",Consolas,monospace;font-size:.89em;background:#f0f0f0;padding:2px 4px;border-radius:4px}
+  .annotation-section{padding-top:9px;margin-top:9px;border-top:1px solid #c6c6c6}.annotation-section h4{font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 4px;font-weight:900}.annotation-section p{margin:0;font-size:14px;line-height:1.65}
+  .annotation-line{font-family:"Cascadia Code","SFMono-Regular",Consolas,monospace;font-size:12px;white-space:pre-wrap;background:#f4f4f4;border:1px solid #111;border-radius:7px;padding:8px 9px;line-height:1.55;overflow-wrap:anywhere}
+  .prompt-card{white-space:normal}
+  .prompt-code{display:grid;gap:2px;margin-top:2px}.code-line{display:grid;grid-template-columns:minmax(0,1fr) 25px;column-gap:7px;align-items:start;min-width:0}.code-text{min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}.code-end-note{width:22px;height:22px;margin-top:0;border:1.3px dashed #111;border-radius:999px;background:#fff;color:#000;font-size:12px;font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;font-weight:900;line-height:1;cursor:help;opacity:.78}.code-line:hover .code-end-note,.code-end-note:focus-visible{opacity:1;background:#000;color:#fff;border-style:solid;outline:none}.code-end-note:hover{background:#000;color:#fff;border-style:solid}
+  @media(max-width:1100px){aside{width:min(963px,92vw);max-width:92vw}.app{grid-template-columns:1fr}.app:not(.sidebar-closed) aside{position:fixed;top:0;right:0;bottom:0;z-index:30}.search-wrap.search-in-canvas{width:min(450px,calc(100% - 86px))}}
+  @media(max-width:900px){.search-wrap.search-in-canvas{left:16px;top:16px;bottom:auto;transform:none;width:calc(100% - 84px)}.annotation-popover{width:min(400px,calc(100vw - 20px));padding:14px 15px}.annotation-title{font-size:17px}.annotation-section p{font-size:13px}}
+  @media print{.annotation-popover{display:none!important}}
+
+
+
+  /* v12 · iPad / iPhone touch-first layout
+     Desktop keeps the full canvas + permanent sidebar. On touch devices the sidebar becomes a drawer,
+     so the same map can be read and operated on a phone without a 963px panel consuming the canvas. */
+  html{height:100%;background:#fff;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  body{min-height:100%;overscroll-behavior:none}
+  .canvas-wrap{touch-action:none;-webkit-user-select:none;user-select:none}
+  .term-token,.code-end-note,.toggle-chip,.toolbtn,.sidebar-toggle,.step-copy,.section-copy,.copy,.mini-actions button,.source-link{touch-action:manipulation}
+  @media (hover:none) and (pointer:coarse), (max-width:1024px){
+    html,body,.app{width:100%;height:100dvh;min-height:100dvh;overflow:hidden}
+    .app{display:block!important;position:relative;background:#fff}
+    .canvas-wrap{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;min-width:0!important;z-index:1}
+    aside{position:fixed!important;top:0!important;right:0!important;bottom:0!important;left:auto!important;width:min(92vw,680px)!important;max-width:92vw!important;height:100dvh!important;margin:0!important;padding:calc(16px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom))!important;border-left:2px solid #111!important;background:#fff!important;z-index:60!important;box-shadow:-10px 0 28px rgba(0,0,0,.16)!important;overflow:auto!important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+    .app.sidebar-closed aside{display:none!important}
+    .sidebar-toggle{position:fixed!important;top:calc(10px + env(safe-area-inset-top))!important;right:calc(10px + env(safe-area-inset-right))!important;z-index:90!important;width:46px!important;height:42px!important;padding:8px 9px!important;border:1.5px solid #111!important;background:#fff!important;box-shadow:0 5px 0 rgba(0,0,0,.12)!important}
+    .sidebar-toggle span:nth-child(1){width:25px}.sidebar-toggle span:nth-child(2){width:18px}.sidebar-toggle span:nth-child(3){width:11px}
+    .search-wrap.search-in-canvas{left:calc(14px + env(safe-area-inset-left))!important;top:calc(12px + env(safe-area-inset-top))!important;right:auto!important;bottom:auto!important;transform:none!important;width:calc(100vw - 88px - env(safe-area-inset-left) - env(safe-area-inset-right))!important;max-width:560px!important;z-index:35!important}
+    .search-wrap.search-in-canvas #search{height:48px!important;font-size:16px!important;padding-left:42px!important;padding-right:40px!important;border-width:2px!important}
+    .search-wrap.search-in-canvas .search-icon{left:15px!important;top:12px!important;font-size:19px!important}.search-wrap.search-in-canvas .kbd{display:none!important}
+    .search-wrap.search-in-canvas .search-results{bottom:auto!important;top:54px!important;max-height:min(48vh,420px)!important;font-size:16px!important}
+    .result{font-size:16px!important;padding:13px 14px!important}
+    .toolbar{left:calc(12px + env(safe-area-inset-left))!important;bottom:calc(12px + env(safe-area-inset-bottom))!important;z-index:34!important;gap:5px!important;padding:6px!important;border-width:1.5px!important;max-width:calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right));overflow:auto!important;-webkit-overflow-scrolling:touch}
+    .toolbtn{height:42px!important;min-width:42px!important;font-size:18px!important;border-radius:9px!important}.toolbtn.primary{padding:0 12px!important;font-size:14px!important}
+    .toggle-chip{width:34px!important;height:34px!important;font-size:20px!important;border-width:2.3px!important;box-shadow:0 4px 0 rgba(0,0,0,.14)!important}
+    .node{min-height:56px!important;padding:13px 14px!important}.node.root{min-height:80px!important}.node .title{font-size:14px!important;line-height:1.32!important}.root .title{font-size:18px!important}.node .sub{font-size:11px!important;line-height:1.42!important}
+    .annotation-popover{z-index:200!important;width:calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right))!important;max-width:560px!important;max-height:calc(76dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important;padding:15px 16px!important;font-size:15px!important}.annotation-title{font-size:18px!important}.annotation-section p{font-size:14px!important}
+    .term-token{border-bottom-width:2px!important;padding:1px 1px;border-radius:3px}.code-end-note{width:30px!important;height:30px!important;font-size:15px!important}
+    .step-copy,.section-copy,.copy{min-height:34px!important;font-size:12px!important;padding:6px 8px!important}.mini-actions button{min-height:44px!important;font-size:14px!important}
+  }
+  @media (max-width:600px){
+    aside{width:100vw!important;max-width:100vw!important;padding-left:16px!important;padding-right:16px!important}
+    .search-wrap.search-in-canvas{width:calc(100vw - 82px - env(safe-area-inset-left) - env(safe-area-inset-right))!important}
+    .toolbar{gap:4px!important}.toolbtn.primary{padding:0 10px!important;font-size:13px!important}
+    .node{width:160px!important}.node.top{width:178px!important}.node.root{width:210px!important}
+    .detail-title{font-size:27px!important}.detail-summary{font-size:17px!important}.detail-section h3{font-size:14px!important}.steps li,.tip,.example-body{font-size:16px!important;line-height:1.65!important}.prompt-card{font-size:14px!important;line-height:1.62!important}
+  }
+
+</style>
+</head>
+<body>
+<div class="app">
+  <main class="canvas-wrap" id="canvas">
+    <div id="viewport"><div class="world" id="world"><svg class="edges" id="edges" viewBox="-5000 -5000 10000 10000" aria-hidden="true"></svg><div class="controls" id="controls"></div><div id="nodes"></div></div></div>
+    <div class="toolbar" aria-label="画布缩放与分支控制"><button class="toolbtn" id="zoomOut" title="缩小">−</button><button class="toolbtn" id="zoomIn" title="放大">＋</button><button class="toolbtn primary" id="expandAll">展开全部</button><button class="toolbtn" id="collapseAll" title="收起到一级">收起</button></div>
+    <div class="search-wrap search-in-canvas" role="search" aria-label="搜索思维导图节点">
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input id="search" placeholder="搜索：AGENTS、测试、工作树…" autocomplete="off" aria-label="搜索节点" />
+      <span class="kbd" aria-hidden="true">/</span>
+      <div id="searchResults" class="search-results" role="listbox" aria-label="搜索结果"></div>
+    </div>
+    <button type="button" id="sidebarToggle" class="sidebar-toggle" title="关闭右侧侧边栏" aria-label="关闭右侧侧边栏" aria-expanded="true">
+      <span></span><span></span><span></span>
+    </button>
+  </main>
+  <aside id="detailPanel" aria-label="右侧节点操作栏"><div id="detail"><div class="empty">点击节点打开操作卡；在 iPad/iPhone 上可单指拖动画布、双指缩放。<br><br>建议首次按顺序阅读：<br>① 目标与边界 → ② 只读预检与规则 → ③ 执行空间 → ④ 执行与验证 → ⑤ 安全、交付、容器与能力库；<br>之后把它当成每次给 Codex 派活前的检查表。</div></div></aside>
+</div>
+<div id="tooltip" class="annotation-popover" role="dialog" aria-live="polite"></div><div id="toast" class="toast"></div>
+<script>
+const data={
+ id:'root',title:'Codex 专业工作总图',sub:'澄清 → 受控环境 → 最小实现 → 证据验证 → 可回滚交付',side:'root',
+ summary:'这不是“让 AI 多写代码”的导图，而是一套让你从入门到专业都能稳定交付的操作系统：先把意图、边界与风险说清，再让 Codex 在受控环境中完成最小正确改动，最后用证据验证并留下可维护的项目状态。',
+ note:'总原则：<b>先让 Codex 解释、调查、计划；再允许它实施。</b>任何涉及真实数据、付费、账户、生产环境、隐私或不可逆变更的任务，都必须设置人工审批点。',
+ steps:['先判断任务属于哪类：研究、规划、修复、功能、重构、审查、自动化、内容或设计。','用任务卡锁定目标、范围、约束、验收与风险。','先读规则与现状，再选择本地、工作树、容器或远程环境。','用小步循环完成：调查 → 计划 → 实施 → 验证 → 交付。','把可复用流程沉淀为 AGENTS.md、Skill、脚本、测试和交接文档。'],
+ prompt:'先不要修改任何文件。请把以下任务转化为执行任务卡：\n1) 目标与用户价值；2) 非目标；3) 允许/禁止改动范围；\n4) 风险与审批点；5) 验收标准；6) 最小实施计划。\n若信息不足，请只提出最关键的澄清问题。',
+ children:[
+  {id:'brief',title:'01 目标、范围与决策',sub:'先定义“做对什么”，再写代码',side:'left',
+   summary:'高质量代理使用从“把模糊愿望变成可验收任务”开始。先区分：现在真的需要代码吗？还是需要调研、原型、流程设计、文案、数据分析或人工决策。',
+   note:'控制代码膨胀的第一步：<b>非目标写清楚。</b>没有明确写入范围的“顺手优化”“通用抽象”“额外依赖”默认不做。',
+   steps:['选择任务模式：只读调研 / 制定计划 / 实施 / 审查 / 交付。','写明业务结果、目标用户、输入、输出和完成定义。','列出非目标、禁止改动、成本/时间/依赖约束。','把无法确定的业务规则标记为“先问我，不要猜”。'],
+   prompt:'任务类型：{调研/计划/修复/新功能/重构/审查}\n目标：{用户可观察到的结果}\n非目标：{明确不做的内容}\n允许修改：{目录/文件/服务}\n禁止：{接口、数据、视觉、依赖或外部操作}\n验收：{命令、测试、手测场景}\n请先复述理解、指出缺口，并给出最小计划。',
+   children:[
+    {id:'taskcard',title:'任务卡：必填 6 项',sub:'目的 / 输入输出 / 范围 / 约束 / 验收 / 交付',summary:'将复杂需求固定成同一种任务卡，Codex 才能少猜、少返工、少越界。',note:'例：<b>输入</b>用户上传图片；<b>输出</b>压缩后的 WebP；<b>边界</b>不上传云端；<b>验收</b>10MB 原图压到 2MB 内并保留透明通道。',steps:['目的：解决谁的什么问题。','输入/输出：真实用户或系统行为。','范围：页面、模块、数据、服务和允许修改目录。','约束：安全、性能、风格、预算、兼容性。','验收：命令、测试、手测与“不应发生的事”。','交付：代码、说明、截图、提交或发布包。'],prompt:'请按任务卡补全信息：\n- 目的：…\n- 输入：…\n- 输出：…\n- 允许修改：…\n- 禁止改动：…\n- 验收命令/场景：…\n- 交付物：…\n缺失项请用问题向我确认，未确认前不要编码。'},
+    {id:'decision',title:'先决策：代码是否真是答案',sub:'研究 / 原型 / 流程 / 代码，选最小成本路径',summary:'专业使用者不会把每个问题都交给代码。先用调研、纸面流程、静态原型、手工试运行确认价值，再决定是否工程化。',note:'例：想做“自动选图工具”时，先让 Codex 做筛选标准、手工流程和 20 张样本评估；只有规则稳定后再开发。',steps:['先验证问题是否真实、频率是否足够高。','先尝试无代码或低代码最小方案。','明确何时从手工流程升级为脚本/工具/产品。','记录关键取舍，避免以后反复推翻。'],prompt:'在写代码前，请对 {问题} 给出 3 种方案：手工流程、轻量脚本/原型、正式系统。分别比较成本、风险、可维护性、适用条件，并推荐最小可验证方案。'},
+    {id:'done',title:'完成定义（DoD）',sub:'让“完成”可测试、可演示、可交接',summary:'没有验收标准的完成只是主观感觉。每项完成定义必须能被命令、测试或具体操作证明。',note:'一个登录功能不是“页面能打开”就完成；至少应覆盖：表单校验、失败提示、成功跳转、会话、移动端、构建与回归。',steps:['功能行为通过。','相关静态检查、类型检查与构建通过。','核心成功和失败路径已手测。','变更、限制、风险与回滚已写入交付。'],prompt:'在实施前，为此任务写不超过 8 条 DoD。每条必须可由测试、命令或手动步骤验证；同时补 2 条“不应发生”的反向验收。'}]},
+
+  {id:'context',title:'02 上下文、规则与只读预检',sub:'先确认状态与规则，再选择执行环境',side:'left',
+   summary:'实际工作中，02 不应被 03 完全替代。先进行零修改预检与只读侦察，确认当前目录、分支、规则、架构与风险；再基于这些证据选择工作树、容器或远程环境。',
+   note:'推荐顺序：<b>01 定义任务 → 02 零修改预检＋读规则 → 03 建立隔离执行空间 → 04 实施与验证。</b>不要一开始就武断决定容器或远程方案，也不要在未检查 Git 状态时直接改代码。',
+   steps:['零修改预检：确认目录、git status、当前分支、是否生产环境与未提交改动。','再读 README、AGENTS.md、依赖清单、目标入口与相关测试。','识别架构边界：UI、领域逻辑、数据、外部服务与部署。','发现文档和代码冲突时先报告，不自行选择。','基于已知依赖、风险与复现要求，再决定 03 的执行环境。'],
+   prompt:'先进行只读预检与侦察：\n1) 确认当前目录、git status、分支、未提交改动与是否可能连接生产；\n2) 找到 README、AGENTS.md、依赖清单、运行与验证命令；\n3) 说明目标功能的入口、数据流、测试与外部依赖；\n4) 推荐下一步应使用当前分支 / worktree / Dev Container / Remote-SSH 的哪一种，并说明理由；\n5) 暂不修改文件。',
+   children:[
+    {id:'preflight',title:'零修改预检：先确认“哪里能动”',sub:'目录 / 分支 / 未提交改动 / 环境风险',summary:'在读取较深的代码、安装依赖或执行命令前，先确认当前工作目录是否正确、是否有未提交工作、是否可能误连生产环境。它是 02 与 03 之间的桥梁。',note:'先做轻量检查，而不是先决定完整容器方案：<b>pwd、git status、git branch、git worktree list、.env / 环境标记、项目运行说明。</b>没有这些信息时，不要让 Codex直接改。',steps:['确认项目根目录与当前分支。','检查 git status、未跟踪文件与现有 worktree。','识别 .env、生产配置、数据迁移或外部写入风险。','确认本任务是否适合当前目录，还是应转入新 worktree / 容器 / 远程主机。'],prompt:'只读执行预检，不修改、不安装、不启动可能写数据的服务。请输出：当前目录、Git 状态/分支、已有 worktree、疑似敏感配置、是否可能触及生产、推荐的安全执行位置与原因。'},
+    {id:'agents',title:'AGENTS.md：项目的代理操作手册',sub:'规则、命令、边界、交付格式',summary:'把可执行的项目规则外置，使 Codex 每次都能遵循相同标准，而不是依赖你重复口述。',note:'最有价值的内容：<b>仓库结构、启动/测试命令、代码约定、禁止区域、验证顺序、交付格式。</b>',steps:['根目录放通用规则；子目录只放更细的局部规则。','规则必须可执行、可验证，避免抽象口号。','写明哪些文件不能直接编辑、哪些改动必须附测试。','每次出现高频错误，就把防错规则补入文档。'],prompt:'# AGENTS.md\n## 项目结构\n- app/: …\n## 常用命令\n- dev: …\n- test: …\n- lint: …\n## 规则\n- 修改 API 时同步更新 …\n- 不得编辑 …\n## 交付\n- 最终报告必须含：修改、测试、风险、回滚方式。'},
+    {id:'readfirst',title:'只读侦察：最少但足够',sub:'规则 → 入口 → 契约 → 近期改动',summary:'读得太少会误改；读得太多会浪费时间。先找决定“怎么运行、哪里改、怎么验证”的少量文件。',note:'改 React 页面时通常先看：<b>路由 → 页面/组件 → 类型/API → 测试 → 样式规范 → 最近 diff</b>，而不是扫描全仓库。',steps:['README / AGENTS.md：规则与命令。','package.json / lockfile：技术栈和脚本。','目标路由、组件、服务：真实入口。','类型、接口、测试：真实契约。','git diff / 最近提交：当前变化与冲突。'],prompt:'围绕 {目标功能}，只读取完成修改所必需的文件。按“规则→入口→依赖→测试→近期变更”列出文件与原因，并说明尚未确认的假设。'},
+    {id:'architecture',title:'架构与可维护性：少而清楚',sub:'复用现有模式；避免投机抽象',summary:'可维护不是层数更多，而是边界清晰、依赖方向稳定、命名一致、测试容易、删除容易。每个新增抽象都应有当前真实需求。',note:'默认策略：<b>优先复用现有模式；先写直接、局部、可测的实现；只有第二/第三处真实重复出现时再抽象。</b>',steps:['先找项目已有的相似实现并沿用模式。','一个模块只承担一个清晰责任。','避免“为了以后”提前加框架、状态层或通用工厂。','新增依赖前说明收益、替代方案、维护成本和退出方式。','删掉死代码、无用开关、过期注释与无关格式化。'],prompt:'请审查该方案的可维护性：\n- 可复用的现有模式是什么？\n- 哪些新增抽象/依赖并非当前必需？\n- 如何将实现缩小为最小清晰版本？\n- 哪些边界最值得加测试？\n不要为了“通用性”引入额外层。'}]},
+
+  {id:'workspace',title:'03 选择并建立执行空间',sub:'基于 02 的证据，隔离任务、环境与风险',side:'left',
+   summary:'03 的决定应该建立在 02 的只读预检之后：已知项目依赖、当前 Git 状态、任务复杂度、数据风险与复现要求，才能选择最小且足够的执行空间。',
+   note:'底线：<b>不在生产环境探索；不让多个代理同时写同一个目录或同一组共享文件；不把业务账号/凭据混进开发环境。</b>',
+   steps:['先根据 02 的结果选择当前分支 / 新分支 / Git worktree / Dev Container / SSH。','中大型任务：独立分支或 Git worktree。','依赖复杂、团队协作或环境污染风险：Dev Container。','远程算力或 Linux 服务：SSH Remote；生产只做受控操作。'],
+   prompt:'基于刚完成的只读预检，为本任务选择最小且足够的执行空间：当前分支 / 新分支 / Git worktree / Dev Container / SSH。请说明：选择依据、最小准备项、数据/密钥边界、验证方式与回滚路径。',
+   children:[
+    {id:'worktree',title:'Worktree：并行但不互相踩',sub:'一任务一目录一分支',summary:'同一仓库同时拥有多个独立目录和分支，适合比较方案、修不同问题、让多个代理并行。',note:'例：<b>main</b> 保持稳定；<b>feature/image-tool</b> 做功能；<b>fix/upload-bug</b> 修问题。每个工作树有自己的 diff 和依赖状态。',steps:['主分支保持可运行、可回滚。','每个目标单独开工作树与分支。','任务结束先审 diff、跑验证，再考虑合并。','不要让不同工作树共用会写入的本地数据库、缓存或 .env。'],prompt:'为以下方案创建隔离工作树：\nA：{方案A}\nB：{方案B}\n分别实现最小可验证版本，输出 diff 概览、测试结果、复杂度/风险比较；不要自动合并。'},
+    {id:'env',title:'环境选择：本地 / 容器 / SSH',sub:'按风险、复现性与成本选择',summary:'环境不是越复杂越好。选择能稳定复现、隔离充分、成本最低的方式。',note:'判断口诀：<b>小型前端学习→本地；依赖复杂或需一致→Dev Container；重算力/服务端→SSH；生产→仅受控发布与诊断。</b>',steps:['本地：快，适合学习和小型项目。','Dev Container：依赖锁定、迁移简单、团队一致。','SSH Remote：算力、Linux、远端服务开发。','生产：限定命令、备份、审批、日志与回滚。'],prompt:'根据任务的依赖、风险、算力、数据敏感性和是否需要他人复现，推荐本地 / Dev Container / SSH。说明理由、准备清单、禁止事项和不适用情形。'},
+    {id:'baseline',title:'安全基线：先保护再开发',sub:'分支、忽略文件、最小权限、可回滚',summary:'稳定的项目先有最小安全基线，再谈速度。',note:'建议最早建立：<b>.gitignore、.env.example、备份策略、环境分层、格式化/lint、最小 CI、可用的 README。</b>',steps:['确认 .env、私钥、缓存、构建产物不进入 Git。','区分开发、测试、生产配置。','为数据迁移、部署和外部 API 写回滚步骤。','最小 CI 至少运行格式、lint、类型/测试或构建。'],prompt:'请为当前项目生成安全基线检查表：Git 忽略、环境变量、环境分层、备份/回滚、CI、日志脱敏、依赖更新、部署审批。标出 P0/P1/P2 优先级。'}]},
+
+  {id:'loop',title:'04 执行闭环与精炼代码',sub:'调查 → 计划 → 最小改动 → 审查',side:'left',
+   summary:'专业代理工作不是一次大改，而是每一步都有下一步证据。通过“先调查、后计划、小步实施、持续审查”保持代码精炼且不累赘。',
+   note:'防止 AI 代码膨胀：<b>不新增未被任务证明需要的依赖、层、配置、功能或重构。</b>每新增一处复杂度，都要说明它解决了哪条验收。',
+   steps:['调查：复现、定位、确认影响范围。','计划：文件、顺序、风险、验收、回滚。','实施：一次只改一组强相关文件。','审查：范围、逻辑、错误路径、依赖与可删除性。','验证：自动化 + 手测 + diff；交付时如实报告。'],
+   prompt:'按受控闭环执行：\nA. 只读调查并复现；\nB. 列文件、步骤、风险、验收与回滚；\nC. 每次只完成一个检查点；\nD. 每步后报告 diff 和验证；\nE. 超出范围或涉及高风险时暂停并询问。',
+   children:[
+    {id:'plan',title:'计划模式：先列行动，不急着写',sub:'复杂任务先求正确方向',summary:'计划适合多文件、数据/接口变更、需求不全或代价高的任务。好计划是可执行的变更顺序，而非泛泛说明。',note:'好计划回答：<b>改哪里、为什么、影响什么、怎么测、失败如何回退。</b>',steps:['定义成功标准、非目标与审批点。','列出要读/要改的文件与原因。','拆成能独立验证的步骤。','标记兼容性、数据、安全、性能与成本风险。','等你确认后才进行破坏性操作。'],prompt:'不要编码。请输出：\n1. 目标与非目标\n2. 将读取/修改的文件及原因\n3. 分步实施（每步含验证）\n4. 兼容性、数据、安全风险\n5. 回滚策略\n控制在 500 字内。'},
+    {id:'smallsteps',title:'小步实施：一轮一个检查点',sub:'改一组 → 验证 → 汇报 → 再继续',summary:'将大任务拆成短循环，能防止“改了一堆才发现方向错”，也让你随时接管或停止。',note:'做支付页时可分为：<b>静态 UI/校验 → mock API → 真实服务接入 → 回调与异常</b>，不要一次全部改完。',steps:['优先完成最小可用的核心路径。','一次只动一个逻辑层或强相关文件组。','每步后看 diff、错误输出和测试。','禁止无关的格式化、重命名和顺手重构。'],prompt:'把任务拆为 3–5 个检查点。每完成一个检查点就停止并报告：修改文件、关键 diff、执行命令、结果、下一步。不得提前实现后续检查点。'},
+    {id:'review',title:'Diff 审查：先审意图，再审细节',sub:'范围、行为、风险、可删除性',summary:'不要被大量生成代码迷惑。审查应回到任务卡：是否只改了该改的、是否保留既有行为、是否增加不必要复杂度。',note:'先问：<b>有没有改错文件、删掉旧行为、引入密钥、增加依赖、留下死代码、把异常吞掉？</b>',steps:['确认变更范围符合允许目录。','检查新增依赖、环境变量、配置和许可。','检查边界、空值、错误、并发与取消。','检查是否能删掉不必要的抽象和重复。','检查注释、文档、测试与代码是否一致。'],prompt:'请以严格审查者身份检查当前 diff。按“阻断问题 / 高风险 / 代码膨胀 / 可改进 / 通过项”分类；每条给出文件位置、原因、最小修复建议。不要直接修改。'}]},
+
+  {id:'quality',title:'05 质量、验证与可观测性',sub:'测试 + 构建 + 场景 + 日志',side:'left',
+   summary:'“能跑”不是可交付。稳定交付靠一条证据链：最相关测试、静态检查、构建、关键场景演练和能定位问题的日志。',
+   note:'优先级不是追求测试数量，而是守住最易坏、最贵、最影响用户的路径。<b>每次真实 Bug 都应留下失败→通过的证据。</b>',
+   steps:['先跑最快、最相关的检查。','再跑类型、lint、构建与必要的集成/E2E。','手测成功、边界、失败和恢复路径。','为关键流程保留结构化日志、错误上下文与监控入口。','交付时如实说明未跑、失败或依赖环境的验证。'],
+   prompt:'为本次改动建立验证矩阵：\n- 自动化：单元 / 集成 / E2E（选择适用项）\n- 静态：格式 / lint / 类型\n- 构建：…\n- 手动：至少 3 个成功/失败场景\n- 可观测性：应记录哪些事件和错误\n请按成本从低到高执行并报告。',
+   children:[
+    {id:'tests',title:'测试策略：先保护最易坏处',sub:'业务规则、契约、关键旅程、回归',summary:'优先覆盖业务规则、Bug 根因、接口契约与核心用户流程，而不是为了覆盖率测试无价值的展示细节。',note:'价格计算更值得测：<b>折扣叠加、四舍五入、0/负数、优惠失效、不同币种</b>，而不是每个按钮的 className。',steps:['单元：纯函数、规则、边界。','集成：组件与接口、数据库或服务协作。','E2E：少量最关键用户旅程。','回归：每个 Bug 留一个失败→通过的用例或清晰复现。'],prompt:'请为 {功能/bug} 找出 5 个最高价值测试点：正常、边界、失败、兼容、回归。先写测试或复现步骤，再实施修复。'},
+    {id:'observability',title:'可观测性：出了问题能定位',sub:'日志、错误、指标、任务状态',summary:'自动化与线上功能的价值不仅是成功，还要在失败时可追踪、可恢复、可人工接管。',note:'内容/图像批处理至少记录：<b>任务 ID、输入摘要、阶段、耗时、失败原因、输出位置、重试次数。</b>',steps:['给异步/批量任务分配任务 ID。','错误日志保留上下文但不得泄漏凭据和个人数据。','区分可重试、需人工处理和不可恢复失败。','提供状态、日志、重试和停止入口。'],prompt:'为 {功能} 设计最小可观测性方案：关键事件、日志字段、错误分类、重试规则、人工接管点、需要脱敏的字段。不要引入不必要的监控平台。'},
+    {id:'verify',title:'交付验证报告',sub:'让你一眼判断能否合并或上线',summary:'固定交付格式能加快你的决策，也方便未来接手。',note:'优秀报告不会只说“完成”。它会说明：<b>改了什么、为什么、跑了什么、结果怎样、没验证什么、如何回滚。</b>',steps:['按用户行为写变更摘要。','列出新增/修改/删除文件。','记录验证命令、环境与结果。','列出已知限制、未验证项与风险。','提供回滚方式与推荐下一步。'],prompt:'请输出最终交付报告：\n1) 已完成（按行为描述）\n2) 关键实现与文件\n3) 验证命令与结果\n4) 未验证项/已知风险\n5) 回滚方式\n6) 推荐下一步。'}]},
+
+  {id:'safe',title:'06 安全、审批与供应链',sub:'最小权限；敏感动作可控',side:'right',
+   summary:'浏览、修改、执行、联网、访问密钥、安装 Skill、调用外部工具和部署生产，风险等级完全不同。把高风险动作停在清晰的审批点。',
+   note:'默认原则：<b>权限只开到任务所需；任何第三方代码/Skill/脚本先审查再执行；生产、数据删除、支付与外部写入必须人工确认。</b>',
+   steps:['开始前列出高风险动作及其影响范围。','密钥放环境变量/密钥管理，绝不写进代码、提示词、截图或日志。','对删除、迁移、部署、付费和外部写入设人工审批。','安装依赖、Skill、MCP 或脚本前检查来源、权限和网络行为。','为不可逆操作准备备份、预览和回滚。'],
+   prompt:'开始前列出本任务的高风险动作：删除、迁移、联网、安装依赖/Skill、部署、凭据、第三方 API、生产写入。\n对每项给出：影响、最小权限、预览/备份、回滚、是否需要我确认。未经明确确认不得执行。',
+   children:[
+    {id:'secrets',title:'密钥与环境变量',sub:'不进仓库，不进截图，不进日志',summary:'API Key、Cookie、密码、私钥和个人数据必须隔离管理。泄漏后需要轮换，而不是只删代码。',note:'发现疑似密钥时：<b>停止回显 → 标记位置 → 轮换/撤销 → 加入忽略 → 改用环境变量 → 查 Git 历史。</b>',steps:['使用 .env.example 只保存变量名。','真实 .env、私钥、会话文件加入 .gitignore。','日志、错误和样本数据做脱敏。','泄漏后立即撤销/轮换并评估历史影响。'],prompt:'检查当前变更与仓库是否含 API Key、密码、Cookie、私钥或个人数据。不要回显具体值；说明位置、风险、脱敏、轮换和历史清理步骤。'},
+    {id:'approval',title:'审批门：不可逆动作停在你手上',sub:'先预览，后确认；一次只执行一次',summary:'审批不是拖慢效率，而是将“探索”与“改变现实”分开。',note:'典型必须确认：<b>删除数据、迁移、推送远端、创建付费资源、部署生产、支付、调用外部写入 API。</b>',steps:['先提供只读检查和命令预览。','说明影响对象与预估影响量。','提供备份/快照与回滚步骤。','收到明确“确认执行”后再执行一次。'],prompt:'以下操作具有不可逆或外部影响，请停在审批点：\n- 将执行：{命令/部署/迁移}\n- 影响：{环境、数据、用户}\n- 备份与回滚：{步骤}\n等待我回复“确认执行”后再继续。'},
+    {id:'supplychain',title:'依赖、Skill 与脚本供应链',sub:'来源可信 ≠ 可直接执行',summary:'高星、热门或“官方目录收录”不等于你的环境已经安全。技能包和依赖中的 scripts、网络请求、环境读取都需要最小化审查。',note:'安全顺序：<b>官方来源优先 → 固定版本/提交 → 读 SKILL.md 与 scripts → 隔离测试 → 最小权限 → 再进入正式项目。</b>',steps:['优先验证发布者、仓库、许可、维护活跃度与变更记录。','审查 SKILL.md、scripts、install hooks、网络请求和环境变量读取。','避免 curl | sh、未知二进制和自动读取全盘/凭据的脚本。','在测试仓库、容器或独立工作树先试运行。','记录安装来源、版本/提交、用途和移除方式。'],prompt:'请对以下依赖或 Skill 做只读安全审查：{名称/仓库/路径}\n输出：来源与维护者、执行文件、网络/文件/凭据权限、潜在危险命令、最小测试方式、是否建议安装。未审查前不要安装或执行。'}]},
+
+  {id:'git',title:'07 Git、审查与交接',sub:'可追踪、可回滚、可维护',side:'right',
+   summary:'Git 不只是备份工具，而是把“可运行的状态”变成可审查、可比较、可回滚的工程记录。',
+   note:'提交应表达一个意图；文档应表达关键决策。<b>让未来的你或外包人员不用重新猜：为什么这样做、怎么运行、怎么验证、怎么回退。</b>',
+   steps:['开始前检查 status、branch、remote 与未跟踪文件。','一项逻辑完整且已验证的变化一个提交。','提交前排除密钥、构建产物、无关格式化和临时文件。','PR/交付说明连接任务卡、方案、验证、风险和回滚。','把关键决策、调试入口与未完成项留在仓库。'],
+   prompt:'请在提交前完成：\n1) 检查 git diff 与未跟踪文件；\n2) 排除密钥、构建产物和无关格式化；\n3) 建议清晰的提交拆分与 Conventional Commit 信息；\n4) 写 PR/交付摘要、风险和回滚方式。',
+   children:[
+    {id:'commit',title:'提交与 PR：小、清楚、可回滚',sub:'每次提交表达一个可验证意图',summary:'小提交让审查、定位、回滚和协作都更快。',note:'好提交：<b>fix(upload): reject oversized images before compression</b>；避免“update”“final final 2”这类无法追溯的描述。',steps:['提交前运行最相关验证。','不要混入重命名、格式化、无关修复。','PR 描述写清目标、方案、验证、风险、截图/证据。','合并后检查部署、日志或关键真实场景。'],prompt:'基于当前 diff，建议：\n- 最佳拆分提交方案\n- 每个提交的 Conventional Commit 信息\n- PR 标题与 5 行以内摘要\n- 审查者最该关注的 3 个风险点。'},
+    {id:'handoff',title:'交接与决策记录',sub:'把上下文留在仓库，不留在脑中',summary:'长期项目的效率取决于下一次能否无痛继续，而不是这次写得多快。',note:'建议留下 1 页交接卡：<b>当前状态、运行/测试命令、关键决策、已知问题、下一步、相关链接/截图。</b>',steps:['必要时更新 README、AGENTS.md、CHANGELOG。','记录“为什么”而不仅是“做了什么”。','记录本地依赖、种子数据与调试入口。','保留能复现的验证命令和故障样本。'],prompt:'为下一位开发者生成交接说明：当前状态、重要文件、启动/测试命令、关键决策、已知限制、未完成项、建议下一步。输出 docs/handoff.md 草案。'}]},
+
+  {id:'scale',title:'08 长任务、子代理与成本',sub:'按边界并行；保持主线程可控',side:'right',
+   summary:'复杂任务的风险是上下文漂移、共享文件冲突和无效消耗。把状态外置到任务卡、计划文件、工作树和验证报告中；只有任务边界明确时才并行。',
+   note:'Codex 的子代理应被明确要求才会启动，并且会额外消耗模型与工具资源。<b>并行的价值来自低耦合，不来自同时开很多代理。</b>',
+   steps:['长任务先写阶段目标、停止条件和预算。','按模块/文件所有权划分并行子任务。','每个子任务单独工作树、输入、输出与验收。','定期要求“已做、证据、阻塞、下一步”摘要。','达到时间/成本上限时，先交付当前可用版本，再决定是否继续。'],
+   prompt:'将此长任务拆为可并行子任务。每项必须列出：目标、允许修改目录、依赖输入、交付物、验收方式、共享文件冲突、估算成本。若并行收益不大，请给出更安全的串行顺序。',
+   children:[
+    {id:'parallel',title:'并行代理：按边界，不按人数',sub:'共享越少，合并成本越低',summary:'并行适合调研、实现、测试、文档等低耦合任务；不适合多个代理同时“优化同一模块”。',note:'好拆法：<b>调研 / UI / 测试 / 文档</b>；坏拆法：两个代理同时修改 authentication.ts。',steps:['先列共享文件、共享数据和接口契约。','将低耦合任务放入不同分支/工作树。','统一接口、命名、验收和交付格式。','由一个主线程审查、整合并运行全量验证。'],prompt:'请评估任务是否适合并行。若适合，给出不重叠子任务表；若不适合，说明串行顺序与原因。禁止为了并行而并行。'},
+    {id:'recovery',title:'卡住时：停止、缩小、保留证据',sub:'避免错误循环与上下文漂移',summary:'当 Codex 连续猜错、测试反复失败或范围膨胀，应立即止损，回到只读诊断。',note:'停止条件：<b>同类错误连续 2 次、修改超出任务卡、需猜测业务规则、触及高风险权限。</b>',steps:['回到最后一个可运行状态。','保留报错、diff、复现步骤与日志。','缩小为最小复现或单一模块。','列出不确定性与最小下一步实验。'],prompt:'停止实施并切换为只读诊断。请输出：\n1) 失败现象与复现；\n2) 已尝试与证据；\n3) 最可能的 3 个根因；\n4) 最小下一步实验；\n5) 是否建议回滚及回滚点。'},
+    {id:'subagents',title:'子代理：主线程负责集成',sub:'专长分工，统一证据与标准',summary:'子代理适合并行探索或分工执行，但主线程必须拥有最终标准、合并权和验证责任。',note:'推荐角色：<b>侦察员（只读）/ 实施者（指定文件）/ 测试员（不改业务）/ 审查员（只读）</b>。',steps:['明确每个角色的权限、输入、目录边界和输出格式。','限制每个子代理的目标与停止条件。','汇总结果时只采信可复现证据。','主线程审 diff、处理冲突、跑最终验证。'],prompt:'为该任务设计最多 4 个子代理角色。每个角色写清：只读或可写、允许目录、输入、输出、验收与禁止事项。由主线程最终整合，不允许子代理自行合并。'}]},
+
+  {id:'scenarios',title:'09 工作类型路线图',sub:'软件、网站、自动化、内容与运营系统',side:'right',
+   summary:'同一套方法可以用于代码、产品、独立站、内容自动化、数据处理、文档和内部运营系统。变化的只是验收、风险、环境和人工接管点。',
+   note:'你的电商与视觉项目最容易遗漏的并不是代码，而是：<b>素材版权、平台规则、数据隐私、失败恢复和人工复核。</b>',
+   steps:['软件修复/重构：优先复现、最小 diff、回归。','Web 工具：优先窄而完整的核心旅程与错误恢复。','独立站：优先交易正确性、安全、SEO、售后。','内容/图像自动化：优先队列、日志、审核和版权边界。','运营/数据工具：优先权限、审计、导入导出与人工接管。'],
+   prompt:'针对以下工作类型：{软件修复/新功能/独立站/Web工具/内容自动化/数据分析/内部运营工具}，把通用流程改写成项目专用任务卡：技术边界、风险、验收、人工审批、上线后观察。',
+   children:[
+    {id:'webtool',title:'Web 工具：先做“窄而完整”的 MVP',sub:'一条核心用户旅程跑通',summary:'先让用户从输入到结果的核心路径完整，再补账号、历史、支付、云端与批量复杂功能。',note:'图片压缩工具第一版只做：<b>上传 → 本地压缩 → 下载 → 错误提示</b>；不要第一天就接会员、云存储、支付和队列。',steps:['定义单一核心用户任务。','先 mock 外部服务与付费能力。','优先处理失败、超限、取消和恢复。','加入最小日志与可观测性。'],prompt:'为 {工具想法} 设计 1 周 MVP：只保留一条核心旅程。列出页面、API、数据、错误场景、验收和明确不做的功能。'},
+    {id:'store',title:'独立站：先守住交易关键链路',sub:'浏览 → 信任 → 下单 → 支付 → 售后',summary:'电商站的优先级不是页面花哨，而是商品、库存、订单、支付回调、数据安全和售后信息正确。',note:'上线前至少演练：<b>下单成功、付款失败、重复回调、库存不足、取消/退款、移动端、邮件通知。</b>',steps:['明确商品、库存、订单状态机。','支付只使用官方/成熟服务商集成。','回调做签名校验和幂等处理。','记录订单操作、异常与人工售后入口。'],prompt:'为 {独立站功能} 写交易链路检查表：状态机、失败分支、回调安全、库存一致性、邮件/通知、人工售后、上线前演练。'},
+    {id:'automation',title:'内容与图像自动化：可审核、可停止、可追溯',sub:'队列、日志、人工审核、版权边界',summary:'内容自动化最重要的不是一次跑多少，而是能否看到每个任务做了什么、失败在哪里、能否人工复核和停止。',note:'涉及外部平台或素材时：<b>不绕过访问控制；不盲目自动发布；先保存草稿、日志与人工审核结果。</b>',steps:['把任务拆为输入、处理、审核、输出四段。','为每项任务记录状态、输入摘要与输出位置。','对失败设置重试上限、人工处理和停止按钮。','为版权、品牌口径、平台规则设置检查清单。'],prompt:'为 {内容/图像自动化} 设计可运营流程：输入来源、处理步骤、任务队列、审核点、日志字段、失败恢复、导出/发布审批、版权与隐私边界。'},
+    {id:'research',title:'研究、文案与规划：先证据，后结论',sub:'事实、假设、方案、决策分开',summary:'Codex 也适合做资料梳理、需求分析、文档、数据探索与方案比较，但必须把事实、推测和建议分开。',note:'高价值输出应包含：<b>来源、时间、假设、不确定性、备选方案与下一步验证。</b>',steps:['明确研究问题与决策用途。','优先一手来源、官方文档、原始数据。','把事实、推断、建议与待验证项分栏。','将结论转成可执行的下一步任务卡。'],prompt:'围绕 {问题} 做研究与方案比较。请严格区分：已证实事实及来源、合理推断、未知项、备选方案、推荐方案与需要人工确认的决策。'}]},
+
+  {id:'skills',title:'10 Skills、MCP 与能力库',sub:'官方优先；第三方先审；高频流程自建',side:'right',
+   summary:'Skill 是可复用的任务工作流包：由 SKILL.md、可选脚本、参考资料和资源构成。它适合把重复的专业流程固化下来；规则写入 AGENTS.md，Skill 管工作流，MCP/外部工具负责连接真实系统。',
+   note:'安装顺序：<b>先用官方系统/精选 Skill；再从高星目录“发现”候选；第三方一律先审代码、固定版本、隔离测试。</b>高星不等于经过安全审计。',
+   steps:['识别高频、稳定、可重复的工作流。','优先使用 OpenAI 官方 System 与 Curated Skills。','第三方 Skill 先做供应链审查，再放测试仓库验证。','用 repo 级 Skill 管项目流程，用 user 级 Skill 管个人通用流程。','当流程已稳定且有验证标准时，再用 skill-creator 自建。'],
+   prompt:'请评估以下工作流是否适合做成 Codex Skill：{工作流}\n输出：触发条件、非触发条件、输入/输出、是否需要脚本、风险/权限、验证方式、推荐安装范围（项目级或用户级）。若不稳定或依赖人工判断，请说明为什么不应做成 Skill。',
+   sources:[
+     {title:'OpenAI 官方：Agent Skills 文档',meta:'Skill 格式、触发方式、使用范围与创建方式',url:'https://developers.openai.com/codex/skills'},
+     {title:'OpenAI 官方：openai/skills Catalog',meta:'System、Curated 与 Experimental Skills 的目录与安装入口',url:'https://github.com/openai/skills'},
+     {title:'OpenAI 官方：用 Skills 加速维护',meta:'AGENTS.md、仓库内 Skills、脚本职责与可重复流程',url:'https://developers.openai.com/blog/skills-agents-sdk'},
+     {title:'高星发现目录：VoltAgent/awesome-agent-skills',meta:'用于发现候选；仓库自身明确不保证第三方 Skill 的安全或正确性',url:'https://github.com/VoltAgent/awesome-agent-skills'}
+   ],
+   children:[
+    {id:'officialskills',title:'官方优先：建议先装的 Skill',sub:'规划、质量、安全、浏览器测试、Git 协作',summary:'先从 OpenAI 官方技能目录选择与你当前工作直接相关的少量 Skill，不要一次装几十个，避免描述拥挤、触发混乱和维护负担。',note:'推荐顺序：<b>skill-creator / skill-installer（System）→ define-goal → create-plan（Experimental，先隔离试用）→ security-best-practices / security-threat-model → playwright / playwright-interactive → gh-fix-ci / gh-address-comments。</b>',steps:['在 Codex 中先用 /skills 查看可用项与名称。','需要安装时用 $skill-installer；一次只装一个并立刻做小任务验证。','规划类：define-goal、create-plan；质量类：playwright、screenshot；安全类：security-best-practices、security-threat-model；协作类：gh-fix-ci、gh-address-comments。','Experimental Skill 先在独立仓库/工作树试用，确认行为与权限后再用于正式项目。','不适用或长期不用的 Skill 及时移除，保持触发描述精炼。'],prompt:'在 Codex 会话中依次执行（按需选用，不要一次全装）：\n$skill-installer define-goal\n$skill-installer security-best-practices\n$skill-installer security-threat-model\n$skill-installer playwright\n$skill-installer gh-fix-ci\n\n实验性计划能力：\n$skill-installer install the create-plan skill from the .experimental folder\n\n安装后：请用一个小型、无敏感数据的任务验证该 Skill 的触发、输出与权限边界。',sources:[
+      {title:'openai/skills · System Skills',meta:'包含 skill-creator 与 skill-installer',url:'https://github.com/openai/skills/tree/main/skills/.system'},
+      {title:'openai/skills · Curated Skills',meta:'包含 define-goal、Playwright、Security、GitHub 等精选目录',url:'https://github.com/openai/skills/tree/main/skills/.curated'}]},
+    {id:'skillscope',title:'Skill、AGENTS.md、MCP：职责别混淆',sub:'规则 / 工作流 / 外部系统连接',summary:'把三者分清，系统才不会越来越乱：AGENTS.md 管项目规则；Skill 管重复步骤与资产；MCP/外部工具连接 GitHub、数据库、浏览器、SaaS 等真实系统。',note:'判断法：<b>“永远遵守”写 AGENTS.md；“遇到某类任务按流程做”写 Skill；“需要读写外部系统”才考虑 MCP。</b>',steps:['AGENTS.md：项目约束、架构、命令、交付标准。','Skill：特定任务的触发条件、步骤、脚本、参考与模板。','MCP/外部工具：真实系统权限、输入输出和审计。','MCP 必须按最小权限、独立凭据、测试环境和人工审批设计。'],prompt:'请将以下内容分配到 AGENTS.md / Skill / MCP（或不需要）：{规则或流程列表}\n逐项说明理由、权限风险、存放位置和最小可维护实现。'},
+    {id:'skillsecurity',title:'第三方 Skill 安全审查门',sub:'高星目录只负责发现，不负责担保',summary:'第三方 Skill 可能包含脚本、依赖、网络请求和环境读取。安装前必须像审查一个小型开源项目一样审查。',note:'安全红旗：<b>curl | sh、混淆代码、自动读取 ~/.ssh/.env/Cookie、要求关闭审批、自动部署/发帖/付款、无许可证或维护者不明。</b>',steps:['确认发布者、仓库归属、许可证、维护活动与 Issue。','阅读全文 SKILL.md；逐个审 scripts/、依赖清单和 install hooks。','检查文件读写范围、网络域名、环境变量与外部 API。','固定 tag/commit；在隔离仓库、容器或工作树运行。','仅授予必要权限；记录来源、版本、用途、卸载方式。'],prompt:'对 {GitHub 仓库/Skill 路径} 做只读审查。请输出：\n1) 发布者与维护信号；2) SKILL.md 触发条件；3) 所有可执行文件与依赖；\n4) 文件/网络/凭据权限；5) 红旗；6) 隔离试用步骤；7) 是否建议安装。未审查前不要下载或执行。'},
+    {id:'customskill',title:'自建 Skill：把高频流程固化',sub:'先稳定流程，再自动化；先指令，后脚本',summary:'当一个流程已经稳定、重复、验收明确时，自建 Skill 比每次长提示更可靠。先用指令型 Skill；只有确定性重复机械操作才下沉成脚本。',note:'官方建议的结构是目录中的 <b>SKILL.md（name、description、instructions）</b>，可选 scripts、references、assets；描述应写清何时触发和何时不触发。',steps:['选择高频且边界稳定的流程。','先写清触发/非触发、输入、步骤、输出和验收。','默认先做 instruction-only；机械重复命令才加入脚本。','项目级可放 .codex/skills/；个人通用可放 ~/.codex/skills/。','通过真实任务评估触发准确性、输出质量和副作用。'],prompt:'使用 $skill-creator 帮我创建一个 Skill：\n用途：{例如：为电商图片工具生成发布前检查报告}\n触发：{什么时候使用}\n非触发：{什么时候不要使用}\n输入：{文件/信息}\n输出：{报告/文件/命令}\n限制：{安全、权限、禁止事项}\n验收：{如何判断成功}\n先生成 instruction-only 版本，并给出 3 个测试任务。',sources:[
+      {title:'OpenAI 官方：Skill 创建与作用域',meta:'SKILL.md、repo/user 级路径、skill-creator',url:'https://developers.openai.com/codex/skills'},
+      {title:'OpenAI 官方：Skill 评估实践',meta:'名称/描述、触发准确性与测试思路',url:'https://developers.openai.com/blog/eval-skills'}]},
+    {id:'catalogs',title:'高星目录：用于发现，不直接信任',sub:'优先官方发布者；再隔离审查',summary:'高星目录能帮助你发现广泛使用的技能包，但不能替代安全审查。尤其是含脚本、浏览器、SaaS、部署和写入操作的 Skill。',note:'安全推荐顺序：<b>OpenAI 官方 catalog → 原厂/平台官方仓库（如测试、部署、支付服务）→ 高星目录中的原始发布者仓库 → 不明来源不装。</b>',steps:['从目录找到候选后回到原始发布者仓库。','检查 Skill 是否与 Codex 兼容、是否仍维护、是否说明权限。','只选择你真实会用的少量 Skill，避免“收藏式安装”。','审查后固定版本，并在测试项目验证。'],prompt:'请从以下高星目录中为 {你的任务} 筛选 3 个候选 Skill：\n- 仅选原厂或知名维护者发布的项目；\n- 排除需要不必要广泛权限、自动外部写入或来源不明的项目；\n- 输出原始仓库、用途、权限、审查要点、隔离试用方式。\n不要替我直接安装。',sources:[
+      {title:'VoltAgent/awesome-agent-skills',meta:'高星发现目录；其 README 明确说明未审计、不保证安全与正确性',url:'https://github.com/VoltAgent/awesome-agent-skills'},
+      {title:'ComposioHQ/awesome-codex-skills',meta:'Codex Skills 分类目录与安装示例；先回到原始 Skill 仓库审查',url:'https://github.com/ComposioHQ/awesome-codex-skills'}]}
+   ]},
+
+  {id:'containers',title:'11 容器化开发环境',sub:'Container Tools + Dev Containers：环境可见、可重建、可交接',side:'right',
+   summary:'这一分支解决“开发工具装在哪里、依赖怎么固定、换电脑或换人如何快速复现”的问题。Container Tools 用于查看和管理 Docker 资产；Dev Containers 把项目所需运行时、工具链和 VS Code 配置写进仓库，使 Codex 在更一致、可回滚的环境里工作。',
+   note:'推荐顺序：<b>先在本地验证项目能跑 → 再用 Dev Container 固化依赖 → 用 Container Tools 看镜像、容器、日志、端口和卷。</b>不要为了“容器化”而把每个小脚本都复杂化。',
+   steps:['先判断是否真的需要容器：依赖复杂、多人协作、需 Linux 一致性、要避免本机污染时再使用。','在仓库加入 .devcontainer/，把关键运行时、工具和启动方式版本化。','把生产 Dockerfile 与开发 Dev Container 分开思考：开发优先调试和体验，生产优先最小镜像和运行安全。','使用 Container Tools 检查镜像、容器、卷、网络、日志和端口；危险动作先预览再执行。','重建、迁移或换电脑后，用同一组验证命令证明环境可复现。'],
+   prompt:'请为当前项目判断是否需要 Dev Container。先只读分析：技术栈、依赖复杂度、团队/迁移需求、Linux 一致性、敏感数据与本机污染风险。输出：\n1) 不使用容器的可行方案；2) 最小 Dev Container 方案；3) 成本与风险；4) 推荐路径。\n不要直接创建或修改容器文件。',
+   prompts:[
+    {label:'环境决策模板',text:'请为当前项目做“本地开发 vs Dev Container”决策。请基于依赖复杂度、跨平台差异、换机频率、多人协作、GPU/服务依赖、敏感数据与启动耗时评分。输出推荐方案、最小配置、明确不做项与回滚方式。先只读分析。'},
+    {label:'容器化实施模板',text:'请只为开发环境创建最小 .devcontainer 配置：固定运行时与必要工具；默认非 root 用户；不把密钥写入镜像；不自动安装无关扩展；列出 rebuild 后的验证命令。先给出文件清单和计划，等我确认后再写。'},
+    {label:'环境审查模板',text:'请审查当前 Dockerfile、docker-compose.yml 与 .devcontainer。重点检查：是否混淆开发与生产、是否 root 运行、是否复制密钥、是否固定基础镜像版本、端口/卷是否过度暴露、是否有重复依赖。给出最小修复建议，不直接修改。'}],
+   sources:[
+     {title:'Microsoft 官方：Containers in VS Code',meta:'Container Tools 的资源管理、Docker Compose 与开发容器入口',url:'https://code.visualstudio.com/docs/containers/overview'},
+     {title:'Microsoft 官方：Create a Dev Container',meta:'devcontainer.json、Dockerfile、Compose、重建与仓库共享',url:'https://code.visualstudio.com/docs/devcontainers/create-dev-container'},
+     {title:'OpenAI 官方：Codex 与 Dev Containers 示例',meta:'Codex 在 Dev Container 中的隔离使用方式',url:'https://developers.openai.com/codex/llms-full.txt'}
+   ],
+   children:[
+    {id:'container-tools',title:'Container Tools：看见并管理 Docker 资产',sub:'容器、镜像、卷、网络、日志与端口',summary:'Container Tools 是 VS Code 中面向 Docker 工作流的管理与调试入口。它适合让你清楚看到“现在跑着什么、占着什么、日志在哪里”，而不是把所有动作都交给命令记忆。',note:'使用原则：<b>先查看，再删除；先读日志，再重启；不要为了清理磁盘随意删卷。</b>卷可能存放数据库或本地开发数据。',steps:['用 Container Explorer 核对容器、镜像、卷、网络和端口状态。','先查看日志与环境，再决定是否重启、重建或进入容器。','对陌生卷、镜像和网络先确认归属，避免删除正在使用的数据。','将重复运行/调试动作写进 tasks 或文档，避免每次手工猜命令。'],prompt:'请基于当前项目生成一份“Container Tools 操作清单”：需要观察的容器、镜像、卷、端口和日志；哪些操作只读，哪些操作必须确认；以及一次安全的重建与验证顺序。',
+     prompts:[
+      {label:'运行状态排查',text:'请只读检查当前 Docker 环境，列出：运行中容器、镜像、卷、网络、端口映射、异常退出容器及最近错误日志。不要停止、删除、重建或拉取任何资源。最后给出最小诊断结论。'},
+      {label:'安全清理计划',text:'请先不要执行清理。根据 Docker 资源清单，把可安全删除、需要确认、绝对不要删三类资源分开；说明每项依据、可能丢失的数据、备份/导出方法与回滚不可行项。'},
+      {label:'容器日志诊断',text:'请分析指定容器的日志与状态，定位启动失败或端口冲突的最可能原因。输出复现证据、最小修复步骤、验证命令与不建议尝试的高风险操作。不要直接修改或重启。'}],
+     sources:[{title:'Microsoft 官方：Container Tools Overview',meta:'Container Explorer 可查看和管理容器、镜像、卷、网络与注册表',url:'https://code.visualstudio.com/docs/containers/overview'}]},
+    {id:'devcontainers',title:'Dev Containers：把开发环境写进仓库',sub:'devcontainer.json / Dockerfile / Compose / 重建验证',summary:'Dev Containers 使用 devcontainer.json 描述如何创建或连接一个包含固定工具链的开发环境。它适合将运行时、扩展、端口转发和项目启动方式变成可复现配置。',note:'最重要的不是“装得多”，而是<b>最小、可重建、非 root、无密钥、文档化</b>。手工在容器里安装的工具会在重建后消失，应沉淀到配置或 Dockerfile。',steps:['从最小镜像或现有 Docker Compose 开始，不要先堆大量 features。','将必要工具、端口、扩展和初始化命令写入 .devcontainer。','需要持久化的依赖用 Dockerfile / features / 配置声明，不依赖手工安装。','设置非 root remoteUser；密钥继续通过宿主或受控注入管理。','每次修改配置后重建容器并运行安装、测试、构建验证。'],prompt:'请为 {项目技术栈} 设计最小 .devcontainer：基础镜像或 Dockerfile、remoteUser、必要 VS Code 扩展、forwardPorts、初始化命令、持久化策略、禁止挂载/注入的敏感内容。先说明取舍，再生成文件草案。',
+     prompts:[
+      {label:'最小配置生成',text:'为当前仓库生成最小 .devcontainer/devcontainer.json 草案。要求：只包含实际需要的语言运行时和工具；使用非 root 用户；不写入 .env、Cookie、私钥；列出要转发的端口；提供启动后执行的验证命令。先输出计划与风险。'},
+      {label:'现有配置瘦身',text:'请审查现有 .devcontainer、Dockerfile 和 Compose 文件，找出不必要的扩展、重复安装、过宽权限、过多端口、开发/生产混用和重建后会丢失的手工步骤。输出精简方案与影响，不直接修改。'},
+      {label:'可复现验证',text:'请为 Dev Container 设计“从零重建验收”：克隆仓库→Reopen/Rebuild→依赖安装→启动→测试→构建。列出每一步预期结果、失败信号、日志位置和恢复方式。'}],
+     sources:[{title:'Microsoft 官方：Create a Dev Container',meta:'devcontainer.json、Dockerfile、Compose、Rebuild Container 与仓库共享',url:'https://code.visualstudio.com/docs/devcontainers/create-dev-container'}]},
+    {id:'container-security',title:'容器安全与开发基线',sub:'最小镜像、非 root、密钥隔离、端口与卷最小化',summary:'容器能隔离依赖，但不会自动安全。开发容器与应用容器仍需控制用户权限、镜像来源、密钥、端口、卷和 Docker daemon 权限。',note:'关键提醒：<b>Docker socket、宿主目录全量挂载、privileged、root 用户、把密钥 COPY 进镜像</b> 都是高风险点；只有在明确理由和审批下才使用。',steps:['固定可信基础镜像/版本，记录更新策略。','优先非 root 用户与高端口，限制 capabilities 与特权模式。','不要把 .env、SSH 私钥、会话文件写进镜像或提交。','卷和端口按任务最小化；测试数据与正式数据严格隔离。','容器配置变化也走 diff 审查与重建验证。'],prompt:'请对当前容器配置做开发安全审查：基础镜像、用户、端口、卷、Docker socket、capabilities、特权模式、密钥、网络和构建上下文。按“阻断 / 高风险 / 建议”分级，并给出最小修复与验证步骤。',
+     prompts:[
+      {label:'容器安全审计',text:'请只读审查当前 Dockerfile、Compose 和 devcontainer 配置。重点找：root、privileged、Docker socket 挂载、宿主目录全量挂载、COPY 密钥、宽泛端口、未固定镜像、危险 postCreateCommand。输出风险分级与最小修复建议。'},
+      {label:'安全默认值设计',text:'请为一个新的开发容器给出安全默认值：非 root 用户、最少端口、只读/最小卷、密钥注入原则、基础镜像更新、日志脱敏、重建与清理策略。注明哪些项需要按项目调整。'},
+      {label:'变更前审批',text:'以下容器配置准备变更：{描述}。请先说明影响的宿主文件、网络、端口、数据卷、权限与密钥；提供预览、备份、回滚和验收命令。未得到确认不要修改。'}],
+     sources:[{title:'Microsoft 官方：Container Tools Tips',meta:'非 root 运行与常见容器开发排查建议',url:'https://code.visualstudio.com/docs/containers/troubleshooting'}]}
+   ]},
+
+  {id:'remote',title:'12 远程开发与安全连接',sub:'Remote-SSH + Remote Tunnels：远程算力可控接入',side:'right',
+   summary:'远程开发的关键不是“把本地 VS Code 画面搬过去”，而是让代码、运行时和算力在合适的远程环境中运行，同时保持身份、权限、端口、日志和 Git 状态可控。已有 SSH 时优先 Remote-SSH；无法方便配置 SSH 时再考虑 Remote Tunnels。两者都可与 Dev Containers 组合。',
+   note:'不要把远程连接等同于生产权限。<b>开发服务器、测试服务器、生产服务器应分开；Codex 只拿到任务所需目录与权限；远程凭据不能直接写进仓库或提示词。</b>',
+   steps:['先确定远程目标是开发机、测试机、GPU/算力机还是生产环境；生产环境只做受控诊断/发布。','有稳定 SSH、密钥与主机管理能力时选 Remote-SSH；无公开 SSH、需临时从外部访问时评估 Remote Tunnels。','远程主机上仍保持 Git 分支/工作树、日志、环境变量和备份的独立性。','需要一致工具链时，在远程主机上再用 Dev Container，而不是将本地 Docker 强行暴露出去。','远程端口转发、共享链接和外部访问按最小暴露原则设置，并在任务后关闭。'],
+   prompt:'请为 {远程开发需求} 选择 Remote-SSH / Remote Tunnels / 远程主机上的 Dev Container 组合。输出：目标环境、访问方式、身份与权限、代码位置、端口策略、数据/密钥边界、日常工作流、故障恢复与明确禁止的操作。先只读规划。',
+   prompts:[
+    {label:'远程方案决策模板',text:'请基于以下条件，为我比较 Remote-SSH、Remote Tunnels、远程 Dev Container 三种方案：{网络条件/是否有固定 IP/是否可配置 SSH/算力/团队协作/数据敏感性/预算}。输出推荐拓扑、理由、最小前置条件、风险、日常使用流程和不推荐的方案。'},
+    {label:'远程环境交接模板',text:'请为一台远程开发机生成交接清单：OS 与版本、项目路径、Git 分支/工作树、运行命令、服务端口、日志位置、Docker/Dev Container 状态、凭据存放原则、备份与恢复、禁止操作。不得输出任何真实密钥。'},
+    {label:'远程安全复核模板',text:'请作为安全审查者检查远程开发方案：SSH/Tunnel 身份认证、目录权限、端口转发、远程 Git 凭据、日志脱敏、生产隔离、Docker 权限、任务结束后的连接/端口清理。按阻断/高风险/建议输出。'}],
+   sources:[
+     {title:'Microsoft 官方：VS Code Remote Development Overview',meta:'Remote-SSH、Dev Containers、Remote Tunnels 的定位与选择',url:'https://code.visualstudio.com/docs/remote/remote-overview'},
+     {title:'OpenAI 官方：Codex Remote Connections',meta:'Codex App 通过 SSH 使用远程项目的方式',url:'https://developers.openai.com/codex/remote-connections'},
+     {title:'OpenAI 官方：Codex 审批与安全',meta:'Windows/WSL2 与权限、沙箱相关设置',url:'https://developers.openai.com/codex/agent-approvals-security'}
+   ],
+   children:[
+    {id:'remote-ssh',title:'Remote-SSH：有 SSH 时的主力方案',sub:'远程目录、终端、扩展与运行时都在主机上',summary:'Remote-SSH 适合连接有 SSH 服务的开发机、虚拟机或服务器。VS Code 在远程环境中运行其服务端组件，使你可以像本地一样编辑、调试和运行，但文件与命令实际位于远程主机。',note:'建议：<b>使用独立开发用户、SSH 密钥、明确项目目录和最小 sudo；不要用 root 直接开发。</b>先用命令行 ssh 验证主机指纹与登录，再交给 VS Code。',steps:['先用 SSH CLI 建立并验证主机指纹，不忽略未知主机提示。','为开发使用独立账号与密钥；限制权限和目录范围。','连接后先检查 pwd、whoami、git status、环境变量与当前服务。','在远程仓库继续遵守分支/工作树与任务卡流程。','端口转发仅开放需要的开发端口，完成后关闭。'],prompt:'请为 {远程主机用途} 制定 Remote-SSH 接入计划：开发用户、SSH 密钥、项目目录、最小权限、Git 身份、服务端口、日志位置、备份、连接验证和任务结束清理。不要提供或要求明文私钥。',
+     prompts:[
+      {label:'SSH 接入检查',text:'在连接远程主机前，请给我一份只读验证清单：主机别名、主机指纹确认、开发用户、密钥位置原则、项目目录、磁盘/内存、Docker 状态、Git 身份、端口占用。不要修改 sshd、不要创建用户、不要更改防火墙。'},
+      {label:'远程任务启动',text:'已通过 Remote-SSH 打开项目。请先只读输出：pwd、whoami、git status、当前分支、项目启动/测试命令、环境变量名称（不回显值）、运行中服务和日志位置。确认无误后再为 {任务} 给最小实施计划。'},
+      {label:'远程故障恢复',text:'远程开发出现 {问题}。请先收集非破坏性证据：连接状态、磁盘、内存、容器、端口、日志和 Git 状态。给出最小恢复步骤与是否需要人工审批；禁止直接重启整机、删除目录或清空 Docker 资源。'}],
+     sources:[{title:'Microsoft 官方：Remote Development using SSH',meta:'Remote-SSH 连接远程主机/VM/容器的工作方式',url:'https://code.visualstudio.com/docs/remote/ssh'}]},
+    {id:'remote-tunnels',title:'Remote Tunnels：无 SSH 或临时安全接入',sub:'经安全隧道连接远程机器，适合外网与无端口暴露场景',summary:'Remote Tunnels 可让 VS Code 通过安全隧道访问一台远程机器，适用于不方便暴露 SSH、需要从不同网络访问工作机或临时远程协作的场景。它不是生产运维通道，也不能替代合理的身份与权限管理。',note:'使用要求：<b>明确哪台机器在运行 tunnel、谁可以登录、隧道何时关闭、哪些端口可转发。</b>不把它当成长期开着且无人维护的后门。',steps:['为 Tunnel 主机设置独立开发账号与系统更新策略。','使用受控的账户登录与命名，记录所有者和用途。','只开放项目目录与必要端口；不把生产凭据放到 Tunnel 主机。','任务完成后关闭未使用的隧道与端口转发。','定期审查已注册设备、访问账户和失效连接。'],prompt:'请为 {远程工作机} 设计 Remote Tunnels 使用方案：主机用途、登录账户、项目目录、端口策略、数据/密钥边界、开启/关闭责任、审计清单和应急断开步骤。不要把 Tunnel 当作生产管理后门。',
+     prompts:[
+      {label:'Tunnel 适用性判断',text:'请判断以下场景是否适合 Remote Tunnels：{场景}。与 Remote-SSH 对比网络要求、身份管理、审计、临时性、端口暴露、团队协作和风险；给出推荐与不推荐理由。'},
+      {label:'Tunnel 启用前清单',text:'在启用 Remote Tunnel 前，请列出必须确认的项目：远程主机所有者、登录账号、系统更新、项目目录权限、运行服务、端口转发、凭据隔离、停止方式、失联时的本地恢复。只生成清单，不执行。'},
+      {label:'隧道收尾检查',text:'请为一次 Remote Tunnels 工作结束生成收尾清单：关闭不需要的端口、停止未用服务、检查 Git 状态、清理临时文件、确认无凭据落盘、记录未完成项、确认 Tunnel 是否需要关闭。'}],
+     sources:[{title:'Microsoft 官方：Developing with Remote Tunnels',meta:'Remote Tunnels 连接远程机器的官方指南',url:'https://code.visualstudio.com/docs/remote/tunnels'}]},
+    {id:'remote-container',title:'组合路线：远程主机 → Dev Container → Codex',sub:'远程算力与可复现工具链同时获得',summary:'对于 Linux/GPU/算力机或复杂服务，你可以先用 Remote-SSH 或 Remote Tunnels 打开远程仓库，再用 Dev Containers 在远程主机的 Docker 环境中重开项目。这样代码、依赖和运行时都在远程，同时环境配置仍可版本化。',note:'优先级：<b>Remote-SSH/Tunnel 解决“到哪台机器”；Dev Container 解决“机器里用什么环境”；Codex 解决“在受控环境中如何完成任务”。</b>',steps:['先确认远程主机 Docker、磁盘、网络、用户权限和项目目录。','通过 SSH 或 Tunnel 打开远程目录，再执行 Dev Containers: Reopen in Container。','容器配置写入仓库；远程主机凭据和项目密钥不写入镜像。','把端口转发、日志、缓存和卷的生命周期写清楚。','结束时验证 Git 状态、停止不需要的服务和端口暴露。'],prompt:'请为“远程主机 + Dev Container + Codex”设计最小工作流。输出拓扑、每层职责、所需扩展、远程主机前置条件、devcontainer 要点、端口/卷/密钥边界、启动与关闭步骤、验证清单。先只读规划。',
+     prompts:[
+      {label:'组合拓扑设计',text:'请为 {项目/远程主机} 设计 Remote-SSH 或 Remote Tunnels → Dev Container → Codex 的三层拓扑。逐层说明：代码在哪里、命令在哪里执行、Docker 在哪里、凭据在哪里、端口怎样转发、日志在哪里、谁有审批权。'},
+      {label:'远程容器预检',text:'在远程主机上进入 Dev Container 前，请只读检查：Docker 可用性、当前用户权限、磁盘、内存、项目目录、Git 状态、端口占用、已有容器/卷、.devcontainer 文件、敏感文件暴露风险。输出是否适合重开容器。'},
+      {label:'收尾与可复现交接',text:'请为远程 Dev Container 项目生成交接与收尾文档：连接方式、项目路径、Rebuild 命令、启动/测试/构建命令、端口、日志、工作树、密钥原则、停止/清理方式和已知风险。不要记录真实凭据。'}],
+     sources:[{title:'Microsoft 官方：Develop on a Remote Docker Host',meta:'Remote-SSH/Remote Tunnels 与 Dev Containers 的组合方式',url:'https://code.visualstudio.com/remote/advancedcontainers/develop-remote-host'}]}
+   ]}
+ ]
+};
+
+const flat=[]; const map=new Map();
+(function walk(n,parent=null,depth=0){n.parent=parent;n.depth=depth;n.collapsed=false;flat.push(n);map.set(n.id,n);(n.children||[]).forEach(c=>walk(c,n,depth+1));})(data);
+const nodesEl=document.getElementById('nodes'),edgesEl=document.getElementById('edges'),controlsEl=document.getElementById('controls'),canvas=document.getElementById('canvas'),world=document.getElementById('world'),tooltip=document.getElementById('tooltip'),detail=document.getElementById('detail');
+const app=document.querySelector('.app'),sidebarToggleBtn=document.getElementById('sidebarToggle');
+const SIDEBAR_STORAGE_KEY='codex-mindmap-sidebar-mode';
+function readSidebarMode(){try{return localStorage.getItem(SIDEBAR_STORAGE_KEY)==='closed'?'closed':'open'}catch(e){return 'open'}}
+function setSidebarMode(mode,shouldPersist=true){
+  const closed=mode==='closed';
+  app.classList.toggle('sidebar-closed',closed);
+  app.classList.toggle('sidebar-open',!closed);
+  const label=closed?'打开右侧侧边栏':'关闭右侧侧边栏';
+  sidebarToggleBtn.title=label;
+  sidebarToggleBtn.setAttribute('aria-label',label);
+  sidebarToggleBtn.setAttribute('aria-expanded',String(!closed));
+  if(shouldPersist){try{localStorage.setItem(SIDEBAR_STORAGE_KEY,closed?'closed':'open')}catch(e){}}
+  requestAnimationFrame(()=>{if(selected)focusNode(selected,true);else updateTransform();});
+}
+sidebarToggleBtn.addEventListener('click',()=>{
+  const next=app.classList.contains('sidebar-closed')?'open':'closed';
+  setSidebarMode(next);
+  showToast(next==='open'?'右侧侧边栏已打开':'右侧侧边栏已关闭');
+});
+const isTouchDevice=window.matchMedia?.('(hover:none) and (pointer:coarse)').matches || navigator.maxTouchPoints>0;
+let initialSidebarMode=readSidebarMode();
+try{if(isTouchDevice && localStorage.getItem(SIDEBAR_STORAGE_KEY)===null)initialSidebarMode='closed'}catch(e){if(isTouchDevice)initialSidebarMode='closed'}
+setSidebarMode(initialSidebarMode,false);
+let selected=null,scale=.57,pan={x:0,y:0},dragging=false,start={x:0,y:0};
+let nodeEls=new Map(),edgeEls=new Map();
+const annotationPopover=document.getElementById('tooltip');
+const searchWrap=document.querySelector('.search-wrap.search-in-canvas');
+const toolbarEl=document.querySelector('.toolbar');
+let annotationTimer=null,annotationHideTimer=null,annotationTarget=null,annotationLocked=false;
+const codeLineRegistry=new Map();
+
+function visible(n){let p=n.parent;while(p){if(p.collapsed)return false;p=p.parent}return true}
+function leaves(n){if(n.collapsed||!n.children?.length)return 1;return n.children.reduce((a,c)=>a+leaves(c),0)}
+function calcPositions(){
+  data.x=0;data.y=0;
+  const branches=data.children;
+  const left=branches.filter(n=>n.side==='left'), right=branches.filter(n=>n.side==='right');
+  layoutSide(left,-1);layoutSide(right,1);
+}
+function layoutSide(roots,dir){
+  const gap=108;let total=roots.reduce((a,n)=>a+leaves(n),0)*gap;let cursor=-total/2+gap/2;
+  function place(n,level){
+    n.x=dir*(260+(level-1)*235);
+    if(!n.children?.length||n.collapsed){n.y=cursor;cursor+=gap;return n.y}
+    const ys=n.children.map(c=>place(c,level+1));n.y=(ys[0]+ys[ys.length-1])/2;return n.y
+  }
+  roots.forEach(n=>place(n,1));
+}
+function bezierPoint(p0,p1,p2,p3,t){const u=1-t;return u*u*u*p0+3*u*u*t*p1+3*u*t*t*p2+t*t*t*p3}
+function nodeHalfWidth(n){if(n===data)return 110;return n.depth===1?97:85}
+function edgePointAt(a,b,t){const fromX=a.x||0,fromY=a.y||0,toX=b.x,toY=b.y,mid=(fromX+toX)/2;return{x:bezierPoint(fromX,mid,mid,toX,t),y:bezierPoint(fromY,fromY,toY,toY,t)}}
+function edgeTogglePoint(a,b){
+  // Put the +/- on the blank section of the curve just before the child border.
+  // It never enters the node box, even after zooming or selecting a node.
+  const fromX=a.x||0,toX=b.x||0,dir=Math.sign(toX-fromX)||1;
+  const targetX=toX-dir*(nodeHalfWidth(b)+30);
+  let lo=.02,hi=.98;
+  for(let i=0;i<24;i++){const mid=(lo+hi)/2;const x=edgePointAt(a,b,mid).x;if((dir>0&&x<targetX)||(dir<0&&x>targetX))lo=mid;else hi=mid}
+  return edgePointAt(a,b,(lo+hi)/2);
+}
+function render(){
+  calcPositions(); nodesEl.innerHTML='';edgesEl.innerHTML='';controlsEl.innerHTML='';nodeEls.clear();edgeEls.clear();
+  const activeSet=selected?selectionSet(selected):null;
+  flat.forEach(n=>{
+    if(n===data||!visible(n))return;
+    if(n.parent&&visible(n.parent)){
+      const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.classList.add('edge',`depth-${Math.min(n.depth,5)}`);
+      const a=n.parent,b=n;const fromX=a.x||0,fromY=a.y||0,toX=b.x,toY=b.y;const mid=(fromX+toX)/2;
+      path.setAttribute('d',`M ${fromX} ${fromY} C ${mid} ${fromY}, ${mid} ${toY}, ${toX} ${toY}`);
+      if(activeSet){if(activeSet.has(n)&&activeSet.has(n.parent))path.classList.add('active');else path.classList.add('dim')}
+      edgesEl.appendChild(path);edgeEls.set(n.id,path);
+      if(n.children?.length){
+        const p=edgeTogglePoint(a,b);const btn=document.createElement('button');btn.type='button';btn.className='toggle-chip'+(activeSet&&!(activeSet.has(n)&&activeSet.has(n.parent))?' dim':'');
+        btn.style.left=p.x+'px';btn.style.top=p.y+'px';btn.textContent=n.collapsed?'＋':'−';btn.title=n.collapsed?'展开下级':'收起下级';
+        btn.addEventListener('click',e=>{e.stopPropagation();toggleNodeByRef(n)});
+        controlsEl.appendChild(btn);
+      }
+    }
+  });
+  [data,...flat.filter(n=>n!==data)].forEach(n=>{
+    if(n!==data&&!visible(n))return;
+    const el=document.createElement('div');const has=n.children?.length;
+    el.className='node '+(n===data?'root':n.depth===1?'top':'')+' '+(has?'branch':'leaf')+(selected===n?' selected':'')+(activeSet&&!activeSet.has(n)?' dim':'');
+    el.style.left=(n.x||0)+'px';el.style.top=(n.y||0)+'px';el.dataset.id=n.id;
+    el.innerHTML=`<div class="title">${escapeHtml(n.title)}</div>${n.sub?`<div class="sub">${escapeHtml(n.sub)}</div>`:''}`;
+    el.addEventListener('click',e=>{e.stopPropagation();selectNode(n);});
+    el.addEventListener('dblclick',e=>{e.stopPropagation();if(has)toggleNodeByRef(n)});
+    nodesEl.appendChild(el);nodeEls.set(n.id,el);
+  });
+  enhanceGlossaryTerms(nodesEl);
+  updateTransform();
+}
+function escapeHtml(s){return String(s).replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]))}
+function ancestors(n){const a=[];let p=n.parent;while(p){a.push(p);p=p.parent}return a}
+function descendants(n){const a=[];(function f(x){(x.children||[]).forEach(c=>{a.push(c);f(c)})})(n);return a}
+function selectionSet(n){return new Set([n,...ancestors(n),...descendants(n)])}
+function selectionNodes(n){return [...selectionSet(n)].filter(x=>x===data||visible(x))}
+function nodeWorldBox(n){
+  const el=nodeEls.get(n.id);
+  const baseWidth=el?.offsetWidth || (n===data?220:(n.depth===1?194:170));
+  const baseHeight=el?.offsetHeight || (n===data?76:(n.depth===1?64:58));
+  // The selected node carries a CSS scale and focus halo, so include it in the fit calculation.
+  const emphasis=selected===n?1.15:1;
+  const halfW=(baseWidth*emphasis)/2+10;
+  const halfH=(baseHeight*emphasis)/2+10;
+  return {minX:(n.x||0)-halfW,maxX:(n.x||0)+halfW,minY:(n.y||0)-halfH,maxY:(n.y||0)+halfH};
+}
+function selectionBounds(n){
+  const nodes=selectionNodes(n);
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  nodes.forEach(node=>{const box=nodeWorldBox(node);minX=Math.min(minX,box.minX);maxX=Math.max(maxX,box.maxX);minY=Math.min(minY,box.minY);maxY=Math.max(maxY,box.maxY)});
+  if(!Number.isFinite(minX))return {minX:-110,maxX:110,minY:-38,maxY:38,width:220,height:76};
+  // Leave a small world-space allowance for the curve stroke and the +/- control.
+  minX-=16;maxX+=16;minY-=16;maxY+=16;
+  return {minX,maxX,minY,maxY,width:maxX-minX,height:maxY-minY};
+}
+function updateTransform(){world.style.transform=`translate(${pan.x}px,${pan.y}px) scale(${scale})`;requestAnimationFrame(syncFloatingControlOverlap)}
+function selectNode(n){selected=n;render();showDetail(n);requestAnimationFrame(()=>focusNode(n,true))}
+function focusNode(n,shouldZoom=true){
+  if(!n)return;
+  const bounds=selectionBounds(n);
+  const rect=canvas.getBoundingClientRect();
+  // Fit the highlighted route as large as possible while retaining a thin no-clipping margin.
+  const inset=Math.max(24,Math.min(40,Math.round(Math.min(rect.width,rect.height)*0.035)));
+  const usableWidth=Math.max(120,rect.width-inset*2);
+  const usableHeight=Math.max(120,rect.height-inset*2);
+  if(shouldZoom){
+    const fitted=Math.min(usableWidth/bounds.width,usableHeight/bounds.height);
+    scale=Math.max(.18,Math.min(2.35,fitted));
+  }
+  const centerX=(bounds.minX+bounds.maxX)/2;
+  const centerY=(bounds.minY+bounds.maxY)/2;
+  pan.x=-centerX*scale;
+  pan.y=-centerY*scale;
+  updateTransform();
+}
+const exampleBank={
+  root:[
+    {label:'基础示例',text:'先让 Codex 只读项目，输出“目标理解＋计划＋风险”，确认后再改动。'},
+    {label:'进阶示例',text:'让 Codex 在一个独立分支完成小功能，并提交验证报告：改了什么、怎么测、还有什么风险。'},
+    {label:'复杂示例',text:'对于涉及多个模块的任务，先做调查与计划，再分 3–5 个检查点推进，每一步都保留 diff 和测试证据。'}],
+  brief:[
+    {label:'基础示例',text:'“只修改登录页错误提示文案；不改接口；通过 lint 和 2 个手测场景。”'},
+    {label:'进阶示例',text:'“在现有 Next.js 项目新增产品详情页推荐区；只改产品页相关组件；移动端优先；通过 build 和手测 3 个场景。”'},
+    {label:'复杂示例',text:'“为图片工具增加批量压缩队列；本轮只做前端队列与进度反馈，不接支付和云存储；先给计划再实施。”'}],
+  taskcard:[
+    {label:'基础示例',text:'目的：减少客服咨询。输入：用户填写表单。输出：提交成功并收到确认。范围：只改 contact 页面。'},
+    {label:'进阶示例',text:'目的：提升商品页转化。输入：用户进入详情页。输出：看到更清晰的规格信息。约束：不改后端接口。'},
+    {label:'复杂示例',text:'目的：优化图片工作流。输入：批量上传图片。输出：生成压缩包与日志。约束：不出云端、保留 EXIF 选项。'}],
+  agents:[
+    {label:'基础示例',text:'在 AGENTS.md 写清 dev / test / lint 命令、目录结构和禁止编辑 generated/。'},
+    {label:'进阶示例',text:'为 api/ 子目录单独补充规则：修改接口时必须更新类型定义和接口测试。'},
+    {label:'复杂示例',text:'把“数据库迁移需附回滚步骤、支付改动需手测回调、图像任务需人工审核”等长期规则全部写进仓库。'}],
+  worktree:[
+    {label:'基础示例',text:'一个 worktree 修上传 Bug，另一个 worktree 试新的压缩方案，最后只合并验证通过的那个。'},
+    {label:'进阶示例',text:'方案 A 做本地压缩，方案 B 做服务端压缩；分别输出 diff、测试结果和复杂度比较。'},
+    {label:'复杂示例',text:'同时推进“独立站支付修复”和“后台报表优化”，两边各自独立目录、分支和验证，互不污染。'}],
+  plan:[
+    {label:'基础示例',text:'先列出要读哪些文件、打算改哪几个文件、每一步怎么验证，再等待批准。'},
+    {label:'进阶示例',text:'在支付页面改动前，先说明状态机、失败场景、回滚方案和需要人工确认的节点。'},
+    {label:'复杂示例',text:'对于跨前后端功能，先拆成“接口确认→前端 UI→联调→验证报告”四段推进。'}],
+  tests:[
+    {label:'基础示例',text:'为表单提交补 3 个测试点：正常提交、空字段、接口失败提示。'},
+    {label:'进阶示例',text:'为图片上传补 5 个测试点：正常图、超大文件、错误格式、取消上传、移动端预览。'},
+    {label:'复杂示例',text:'为独立站支付链路准备单元测试、集成测试和一次手工全链路演练。'}],
+  verify:[
+    {label:'基础示例',text:'交付时写明：修改文件、运行的命令、结果截图、是否可直接合并。'},
+    {label:'进阶示例',text:'报告中补充“未验证项”和“已知限制”，方便你判断是否继续。'},
+    {label:'复杂示例',text:'对高风险功能附上回滚方式、开关方案和上线后观察指标。'}],
+  safe:[
+    {label:'基础示例',text:'先让 Codex 列出本次可能触发的删除、联网、发布动作，没有确认不执行。'},
+    {label:'进阶示例',text:'部署前要求它给出影响范围、备份方式和回滚步骤，再等待你批准。'},
+    {label:'复杂示例',text:'数据库迁移、支付、第三方写入 API 等都必须停在审批点，先做只读检查。'}],
+  git:[
+    {label:'基础示例',text:'提交前先看 git diff，清掉无关格式化和构建产物，再生成清晰的 commit message。'},
+    {label:'进阶示例',text:'让 Codex 输出 PR 摘要：目标、方案、验证、风险、回滚。'},
+    {label:'复杂示例',text:'多人协作时，把入口文件、运行命令、未完成项一并写入交接说明，减少后续接手成本。'}],
+  webtool:[
+    {label:'基础示例',text:'图片压缩工具第一版只做“上传→压缩→下载→错误提示”，不接账号系统。'},
+    {label:'进阶示例',text:'为一个小工具补日志、超限提示和失败恢复，让它能稳定服务真实用户。'},
+    {label:'复杂示例',text:'把内容自动化工具拆成任务队列、人工审核和导出结果三部分逐步上线。'}],
+  store:[
+    {label:'基础示例',text:'先确保商品浏览、下单、支付成功和失败提示链路正确。'},
+    {label:'进阶示例',text:'上线前重点演练库存不足、重复回调、移动端下单和取消订单。'},
+    {label:'复杂示例',text:'把订单状态机、售后入口、邮件通知和异常审计一起纳入交付检查表。'}]
+};
+function getExamples(n){
+  if(exampleBank[n.id]) return exampleBank[n.id];
+  const short=(n.title||'当前节点').replace(/^\d+\s*/,'');
+  return [
+    {label:'基础示例',text:`围绕“${short}”先做一个范围很小、能立即验证的任务，只涉及单一页面或单一模块。`},
+    {label:'进阶示例',text:`把“${short}”扩展到 2–3 个相关文件，要求先给计划，再实施，再汇报验证结果。`},
+    {label:'复杂示例',text:`如果“${short}”涉及接口、数据或部署，则先做只读侦察，列出风险与审批点，不直接执行高风险操作。`}
+  ];
+}
+function getPromptTemplates(n){
+  if(Array.isArray(n.prompts)&&n.prompts.length>=2) return n.prompts.slice(0,3);
+  const title=(n.title||'当前节点').replace(/^\d+\s*/,'');
+  const primary=n.prompt||`请围绕“${title}”先做只读分析，明确目标、边界、风险与验收，再给出最小计划。`;
+  return [
+    {label:'核心执行模板',text:primary},
+    {label:'只读侦察 / 计划模板',text:`围绕“${title}”，请先不要修改、安装、删除、部署或执行外部写入。请读取完成任务所必需的最少文件/配置，说明当前状态、约束、风险、未知项，以及按检查点拆分的最小计划。每一步都要给验证方式和暂停条件。`},
+    {label:'审查 / 交付模板',text:`请以专业审查者身份复核“${title}”相关的当前变更。检查：是否超出范围、是否有安全/数据/兼容性风险、是否增加不必要复杂度、测试是否足够、如何回滚。请按“阻断问题 / 高风险 / 可精简项 / 验证证据 / 下一步”输出，不直接修改。`}
+  ];
+}
+function showDetail(n){
+  const trail=[...ancestors(n).reverse(),n].map(x=>x.title).join('  ›  ');
+  const stepItems=(n.steps||[]).map((x,index)=>`<li><div class="step-row"><span class="step-text">${escapeHtml(x)}</span><button type="button" class="step-copy" data-action="copy-step" data-id="${escapeHtml(n.id)}" data-index="${index}" title="复制这一步">复制</button></div></li>`).join('');
+  const examples=getExamples(n);
+  const exampleItems=examples.slice(0,3).map(x=>`<div class="example-card"><div class="example-head"><div class="example-title">${escapeHtml(x.label)}</div></div><div class="example-body">${escapeHtml(x.text)}</div></div>`).join('');
+  const templates=getPromptTemplates(n);
+  codeLineRegistry.clear();
+  const templateItems=templates.map((t,index)=>`<div class="prompt-card"><div class="prompt-label">${escapeHtml(String(index+1).padStart(2,'0'))} · ${escapeHtml(t.label||'实用模板')}</div><button type="button" class="copy" data-action="copy-template" data-id="${escapeHtml(n.id)}" data-index="${index}">复制</button>${promptCodeHtml(t.text,`${n.id}:${index}`)}</div>`).join('');
+  const sourceItems=(n.sources||[]).map(s=>`<a class="source-link" href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer"><b>${escapeHtml(s.title)}</b><span>${escapeHtml(s.meta||'')}</span></a>`).join('');
+  detail.innerHTML=`<div class="crumb">${escapeHtml(trail)}</div>
+    <h2 class="detail-title">${escapeHtml(n.title)}</h2>
+    <p class="detail-summary">${escapeHtml(n.summary||'')}</p>
+    <div class="detail-section">
+      <div class="section-title-row"><h3>操作步骤</h3>${n.steps?.length?`<button type="button" class="section-copy" data-action="copy-steps" data-id="${escapeHtml(n.id)}">复制全部步骤</button>`:''}</div>
+      <ol class="steps">${stepItems}</ol>
+    </div>
+    ${n.note?`<div class="detail-section"><h3>关键提醒</h3><div class="tip">${n.note}</div></div>`:''}
+    <div class="detail-section"><h3>可复制指令模板</h3><div class="prompt-stack">${templateItems}</div></div>
+    ${sourceItems?`<div class="detail-section"><h3>官方 / 可信来源</h3><div class="sources">${sourceItems}</div></div>`:''}
+    <div class="detail-section">
+      <div class="section-title-row"><h3>示例</h3></div>
+      <div class="examples">${exampleItems}</div>
+    </div>
+    <div class="mini-actions">${n.children?.length?`<button type="button" data-action="toggle-children" data-id="${escapeHtml(n.id)}">${n.collapsed?'展开下级':'收起下级'}</button>`:''}<button type="button" data-action="focus-node" data-id="${escapeHtml(n.id)}">放大并居中</button></div>`;
+  enhanceGlossaryTerms(detail);
+  bindCodeLineAnnotations(detail);
+}
+function copyValue(value,successMessage){
+  const done=()=>showToast(successMessage);
+  const failed=()=>showToast('复制失败，请手动选择文本');
+  if(navigator.clipboard&&window.isSecureContext){
+    navigator.clipboard.writeText(value).then(done).catch(()=>fallbackCopy(value)?done():failed());
+  }else if(fallbackCopy(value)){done()}else{failed()}
+}
+function fallbackCopy(value){
+  const textarea=document.createElement('textarea');
+  textarea.value=value;textarea.setAttribute('readonly','');textarea.style.position='fixed';textarea.style.opacity='0';
+  document.body.appendChild(textarea);textarea.select();
+  let ok=false;try{ok=document.execCommand('copy')}catch(e){ok=false}
+  textarea.remove();return ok;
+}
+function copyTemplateById(id,index){const n=map.get(id);const templates=n?getPromptTemplates(n):[];if(templates[index]?.text)copyValue(templates[index].text,'指令模板已复制')}
+function copyStepById(id,index){const n=map.get(id);if(n?.steps?.[index]!==undefined)copyValue(`${index+1}. ${n.steps[index]}`,'操作步骤已复制')}
+function copyStepsById(id){const n=map.get(id);if(n?.steps?.length)copyValue(n.steps.map((step,index)=>`${index+1}. ${step}`).join('\n'),'全部操作步骤已复制')}
+function toggleNodeByRef(n){
+  if(!n||!n.children?.length)return;
+  n.collapsed=!n.collapsed;
+  selected=n;
+  render();
+  showDetail(n);
+  requestAnimationFrame(()=>focusNode(n,true));
+  showToast(n.collapsed?'已收起下级':'已展开下级');
+}
+function focusById(id){const n=map.get(id);if(!n)return;selected=n;render();showDetail(n);requestAnimationFrame(()=>focusNode(n,true));}
+detail.addEventListener('click',e=>{
+  const btn=e.target.closest('button[data-action]');
+  if(!btn)return;
+  e.preventDefault();e.stopPropagation();
+  const id=btn.dataset.id;const n=map.get(id);
+  switch(btn.dataset.action){
+    case 'copy-template': copyTemplateById(id,Number(btn.dataset.index)); break;
+    case 'copy-step': copyStepById(id,Number(btn.dataset.index)); break;
+    case 'copy-steps': copyStepsById(id); break;
+    case 'toggle-children': toggleNodeByRef(n); break;
+    case 'focus-node': focusById(id); break;
+    case 'code-line-note': showCodeLineAnnotation(btn,btn.dataset.codeKey,true); break;
+  }
+});
+
+const glossaryEntries=[
+  {aliases:['AGENTS.md'],zh:'代理操作说明文件',concept:'项目仓库中的规则文件，专门告诉编码智能体项目结构、命令、边界与交付要求。',use:'让 Codex 每次进入项目都能按同一套规则工作，减少反复口述与误改。'},
+  {aliases:['SKILL.md'],zh:'技能说明文件',concept:'一个 Skill 的入口说明，描述该技能的适用场景、步骤、脚本和资源。',use:'让可复用工作流以“技能包”的方式被发现和执行。'},
+  {aliases:['Codex'],zh:'Codex 编码智能体',concept:'用于阅读代码、规划任务、修改文件、运行验证和交付说明的智能体工作方式。',use:'把“理解 → 计划 → 实施 → 验证”串成可控的开发闭环，而不是只生成零散代码。'},
+  {aliases:['Git worktree','Worktree'],zh:'Git 工作树',concept:'同一仓库的额外独立工作目录，每个目录可对应不同分支。',use:'让多个任务或多个代理并行工作，避免互相覆盖未提交改动。'},
+  {aliases:['Dev Containers','Dev Container'],zh:'开发容器',concept:'用仓库配置描述并启动统一的开发工具链、运行时与扩展环境。',use:'提高环境可复现性，降低“在我电脑上能运行”的差异。'},
+  {aliases:['Container Tools'],zh:'容器工具',concept:'VS Code 中用于查看和管理 Docker 容器、镜像、卷、网络、日志和端口的工具集。',use:'帮助你先看清容器资产和日志，再做重启、重建或排障。'},
+  {aliases:['Remote-SSH'],zh:'远程 SSH 开发',concept:'通过 SSH 连接远程主机，并让编辑、终端和扩展在远程环境运行。',use:'适合远程开发机、Linux 主机、GPU 算力机或测试服务器。'},
+  {aliases:['Remote Tunnels','Remote Tunnel'],zh:'远程隧道连接',concept:'通过受控隧道方式访问远程机器，常用于不方便直接暴露 SSH 的场景。',use:'在明确身份、权限与关闭责任的前提下，提供临时或跨网络的远程开发接入。'},
+  {aliases:['Docker Compose','Compose'],zh:'Docker 编排配置',concept:'用 YAML 描述多个容器服务、网络、卷和依赖关系的方式。',use:'让应用、数据库、缓存等多服务环境可以一起启动和复现。'},
+  {aliases:['Dockerfile'],zh:'Docker 镜像构建文件',concept:'定义如何从基础镜像安装依赖、复制文件并构建容器镜像的脚本文件。',use:'把容器运行环境版本化，减少手工安装造成的差异。'},
+  {aliases:['devcontainer.json'],zh:'开发容器配置文件',concept:'Dev Container 的核心配置文件，用于声明镜像、工具、端口、扩展和初始化动作。',use:'把开发环境的关键约定随代码一起提交和共享。'},
+  {aliases:['Docker socket'],zh:'Docker 守护进程套接字',concept:'本机 Docker 客户端与 Docker 守护进程通信的接口。',use:'挂入容器后可能赋予容器管理宿主 Docker 的高权限，因此应严格限制。'},
+  {aliases:['remoteUser'],zh:'远程容器用户',concept:'Dev Container 中指定 VS Code 和终端默认使用的容器用户。',use:'用非 root 用户开发，降低误操作和权限过宽风险。'},
+  {aliases:['forwardPorts'],zh:'端口转发声明',concept:'Dev Container 配置中指定需要暴露给本机 VS Code 的开发端口。',use:'让本机浏览器或调试器安全访问容器内服务。'},
+  {aliases:['postCreateCommand'],zh:'容器创建后命令',concept:'Dev Container 创建完成后自动运行的初始化命令。',use:'可自动安装依赖或做环境准备，但命令过宽会带来安全和重建风险。'},
+  {aliases:['MCP'],zh:'模型上下文协议',concept:'让智能体通过标准接口连接外部工具、数据源或服务的协议/机制。',use:'为 Codex 增加受控的工具调用能力，但必须限定权限与数据范围。'},
+  {aliases:['Skills','Skill'],zh:'技能包',concept:'将某类任务的流程、说明、脚本和资源封装成可复用能力单元。',use:'把高频且成熟的工作流标准化，减少每次从零写提示词。'},
+  {aliases:['README'],zh:'项目说明文档',concept:'仓库中面向使用者和维护者的基础说明文件，通常包含项目用途、安装、运行和验证方法。',use:'帮助你和 Codex快速建立项目全貌，找到正确的启动和测试入口。'},
+  {aliases:['GitHub Actions'],zh:'GitHub 自动化工作流',concept:'GitHub 上用于在提交、拉取请求或定时事件时自动运行构建、测试或发布的 CI 能力。',use:'将重复验证前移到代码托管平台，降低合并后出错概率。'},
+  {aliases:['GitHub'],zh:'GitHub 代码托管平台',concept:'用于托管 Git 仓库、协作审查、议题、发布与自动化工作流的平台。',use:'使代码变更可审查、可追踪、可协作。'},
+  {aliases:['Git'],zh:'分布式版本控制系统',concept:'记录代码和文件变更历史的工具系统，支持分支、比较、合并和回滚。',use:'让每次修改可追踪、可审查，并在出错时恢复到可靠状态。'},
+  {aliases:['git status'],zh:'Git 当前状态检查',concept:'查看当前分支、已修改文件、暂存文件和未跟踪文件的命令。',use:'在开始或提交前确认工作区是否干净，避免覆盖他人的改动。'},
+  {aliases:['git diff'],zh:'Git 变更对比',concept:'查看当前工作区或分支之间实际代码差异的命令。',use:'用于审查自动生成的改动是否符合任务范围。'},
+  {aliases:['git branch'],zh:'Git 分支查看/管理',concept:'查看、创建或切换分支的 Git 命令。',use:'将不同任务隔离在不同变更轨道，便于合并和回滚。'},
+  {aliases:['git worktree list'],zh:'工作树清单命令',concept:'列出当前仓库所有工作树、路径与关联分支的 Git 命令。',use:'避免在错误目录或重复工作树中操作。'},
+  {aliases:['API Key'],zh:'接口密钥',concept:'用于证明程序或用户有权调用某个在线服务的敏感凭据。',use:'必须通过环境变量或密钥管理提供，不能写进代码、截图、日志或提交记录。'},
+  {aliases:['API'],zh:'应用程序接口',concept:'不同程序或模块之间交换数据和调用能力的约定。',use:'定义前后端、服务或第三方系统怎样传参、返回和处理错误。'},
+  {aliases:['CLI'],zh:'命令行界面',concept:'通过终端命令操作程序或工具的方式。',use:'适合自动化、脚本化、可复现的开发与运维操作。'},
+  {aliases:['IDE'],zh:'集成开发环境',concept:'将代码编辑、调试、终端、版本控制与扩展整合在一起的开发软件。',use:'例如 VS Code，可作为 Codex 与本地/远程开发环境的统一入口。'},
+  {aliases:['CI'],zh:'持续集成',concept:'每次变更后自动运行构建、检查和测试的工程机制。',use:'尽早发现问题，避免未经验证的代码进入主分支。'},
+  {aliases:['E2E'],zh:'端到端测试',concept:'从用户真实操作入口到最终结果的全链路测试。',use:'验证页面、服务、数据和交互是否能一起正确工作。'},
+  {aliases:['PR'],zh:'拉取请求 / 合并请求',concept:'将一个分支的变更提交给他人审查并合并到目标分支的协作单元。',use:'集中展示目标、Diff、测试证据和风险，便于团队审查。'},
+  {aliases:['MVP'],zh:'最小可行产品',concept:'只保留验证核心价值所需功能的最小版本。',use:'避免第一版就引入过多功能、依赖和维护成本。'},
+  {aliases:['DoD','Definition of Done'],zh:'完成定义',concept:'对“任务算完成”的可检查标准。',use:'把主观的“差不多完成”变成能由命令、测试或手测证明的验收条件。'},
+  {aliases:['lint'],zh:'静态代码检查',concept:'通过规则检查代码格式、潜在错误和风格问题的过程。',use:'在运行前发现常见错误，维持代码风格一致。'},
+  {aliases:['build'],zh:'构建',concept:'将源代码编译、打包或生成可部署产物的过程。',use:'验证项目在真实生产构建链路中是否完整可用。'},
+  {aliases:['Next.js'],zh:'Next.js Web 框架',concept:'基于 React 的 Web 应用框架，提供路由、服务端渲染、构建等能力。',use:'用于构建网站、独立站和 Web 工具的前后端一体化应用。'},
+  {aliases:['React'],zh:'React 前端界面库',concept:'以组件方式构建用户界面的 JavaScript 库。',use:'将页面拆成可复用、可组合和可测试的界面组件。'},
+  {aliases:['WebP'],zh:'WebP 图片格式',concept:'一种常用于网页的现代图片格式，通常有较好的压缩效率。',use:'在保持可接受视觉质量的前提下降低图片体积。'},
+  {aliases:['EXIF'],zh:'图片交换格式元数据',concept:'图像文件中记录拍摄设备、时间、方向、定位等附加信息的元数据。',use:'图片处理时决定是否需要保留、修正方向或出于隐私删除。'},
+  {aliases:['WSL2'],zh:'Windows Linux 子系统 2',concept:'在 Windows 上提供更完整 Linux 内核与命令行环境的机制。',use:'适合在 Windows 上获得更稳定的 Linux 开发、Docker 和工具链体验。'},
+  {aliases:['SSH'],zh:'安全外壳协议',concept:'一种加密的远程登录与命令执行协议。',use:'用于安全连接远程开发机、传输文件和执行受控操作。'},
+  {aliases:['OpenAI'],zh:'OpenAI',concept:'开发和提供 Codex 等 AI 产品与平台的机构。',use:'在本导图中主要指 Codex、官方文档与官方技能生态的来源。'},
+  {aliases:['Playwright'],zh:'浏览器自动化测试工具',concept:'用于驱动浏览器执行页面操作、断言和截图的自动化框架。',use:'适合为关键 Web 流程编写 E2E 测试与回归检查。'},
+  {aliases:['package.json'],zh:'Node.js 项目配置清单',concept:'记录项目依赖、脚本、名称和版本等信息的 JSON 文件。',use:'帮助定位项目技术栈、启动、测试、构建和依赖管理命令。'},
+  {aliases:['lockfile'],zh:'依赖锁定文件',concept:'精确记录实际安装依赖版本的文件。',use:'让不同机器安装到一致依赖，减少环境差异。'},
+  {aliases:['.env.example'],zh:'环境变量示例文件',concept:'只包含变量名称和示例格式、不含真实密钥的配置样板。',use:'帮助他人配置项目，同时避免真实凭据进入仓库。'},
+  {aliases:['.env'],zh:'环境变量文件',concept:'在本地或运行环境中保存配置和敏感变量的文件。',use:'通常用于提供密钥、数据库地址等，必须避免提交到版本库。'},
+  {aliases:['pwd'],zh:'当前目录命令',concept:'在类 Unix 终端输出当前工作目录的命令。',use:'开始操作前确认自己是否处于正确项目路径。'},
+  {aliases:['whoami'],zh:'当前用户命令',concept:'在类 Unix 终端输出当前登录用户名的命令。',use:'确认是否使用了正确的开发身份，避免以 root 或错误账号操作。'},
+  {aliases:['root'],zh:'超级用户',concept:'类 Unix 系统中拥有最高权限的用户身份。',use:'开发时应尽量避免使用，以降低误删、权限污染和安全风险。'}
+];
+const glossaryAliasMap=new Map();
+glossaryEntries.forEach(entry=>entry.aliases.forEach(alias=>glossaryAliasMap.set(alias.toLowerCase(),entry)));
+const glossaryAliases=[...glossaryAliasMap.keys()].sort((a,b)=>b.length-a.length);
+const glossaryRegex=new RegExp(glossaryAliases.map(escapeRegex).join('|'),'gi');
+function escapeRegex(value){return String(value).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
+function validTermBoundary(text,start,end,term){
+  const first=term[0],last=term[term.length-1],prev=text[start-1]||'',next=text[end]||'';
+  if(/[A-Za-z0-9]/.test(first)&&/[A-Za-z0-9]/.test(prev))return false;
+  if(/[A-Za-z0-9]/.test(last)&&/[A-Za-z0-9]/.test(next))return false;
+  return true;
+}
+function fallbackEntry(term){
+  return {zh:`技术术语：${term}`,concept:'这是导图中的英文技术词、缩写或工具名称。当前词条没有专门的本地释义，需要结合所在项目、命令或配置文件理解。',use:'在实际使用中，先查看它出现的上下文与官方文档；不要仅凭名称猜测权限、行为或副作用。'};
+}
+function collectTermMatches(text){
+  const matches=[];glossaryRegex.lastIndex=0;let match;
+  while((match=glossaryRegex.exec(text))){
+    const raw=match[0];if(!validTermBoundary(text,match.index,match.index+raw.length,raw))continue;
+    matches.push({start:match.index,end:match.index+raw.length,term:raw,entry:glossaryAliasMap.get(raw.toLowerCase())});
+  }
+  const covered=(start,end)=>matches.some(m=>start<m.end&&end>m.start);
+  const fallback=/(?:[A-Z]{2,}[A-Z0-9_-]*|[A-Z][A-Za-z0-9]*(?:[-./][A-Za-z0-9._/-]+)+|[A-Z][a-z]+[A-Z][A-Za-z0-9]*)/g;
+  while((match=fallback.exec(text))){
+    const raw=match[0];const start=match.index,end=start+raw.length;
+    if(covered(start,end))continue;
+    matches.push({start,end,term:raw,entry:fallbackEntry(raw)});
+  }
+  return matches.sort((a,b)=>a.start-b.start||b.end-a.end);
+}
+function enhanceGlossaryTerms(root){
+  if(!root)return;
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode(node){
+    const parent=node.parentElement;
+    if(!parent||!node.nodeValue.trim())return NodeFilter.FILTER_REJECT;
+    if(parent.closest('script,style,textarea,input,button,[data-term-token],.term-token,.code-end-note,.prompt-label'))return NodeFilter.FILTER_REJECT;
+    return NodeFilter.FILTER_ACCEPT;
+  }});
+  const targets=[];while(walker.nextNode())targets.push(walker.currentNode);
+  targets.forEach(node=>{
+    const text=node.nodeValue;const matches=collectTermMatches(text);if(!matches.length)return;
+    const frag=document.createDocumentFragment();let cursor=0;
+    matches.forEach(match=>{
+      if(match.start<cursor)return;
+      if(match.start>cursor)frag.appendChild(document.createTextNode(text.slice(cursor,match.start)));
+      const term=document.createElement('span');term.className='term-token';term.tabIndex=0;term.setAttribute('role','button');term.dataset.termToken='1';term.dataset.term=match.term;
+      term.textContent=text.slice(match.start,match.end);
+      bindTermAnnotation(term,match.entry,match.term);
+      frag.appendChild(term);cursor=match.end;
+    });
+    if(cursor<text.length)frag.appendChild(document.createTextNode(text.slice(cursor)));
+    node.replaceWith(frag);
+  });
+}
+function bindTermAnnotation(el,entry,term){
+  el.addEventListener('pointerenter',()=>scheduleAnnotation(el,{kind:'term',entry,term},false));
+  el.addEventListener('pointerleave',()=>scheduleAnnotationHide(el));
+  el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();showAnnotation(el,{kind:'term',entry,term},true)});
+  el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showAnnotation(el,{kind:'term',entry,term},true)}});
+}
+function promptCodeHtml(text,keyPrefix){
+  return `<div class="prompt-code">${String(text||'').split('\\n').map((line,index)=>{
+    const key=`${keyPrefix}:${index}`;codeLineRegistry.set(key,line);
+    return `<div class="code-line"><span class="code-text">${escapeHtml(line||' ')}</span><button type="button" class="code-end-note" data-action="code-line-note" data-code-key="${escapeHtml(key)}" title="悬停或点击查看这一行释义" aria-label="查看这一行释义">ⓘ</button></div>`;
+  }).join('')}</div>`;
+}
+function bindCodeLineAnnotations(root){
+  root.querySelectorAll('.code-end-note').forEach(btn=>{
+    btn.addEventListener('pointerenter',()=>showCodeLineAnnotation(btn,btn.dataset.codeKey,false,true));
+    btn.addEventListener('pointerleave',()=>scheduleAnnotationHide(btn));
+    btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();showCodeLineAnnotation(btn,btn.dataset.codeKey,true)});
+    btn.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showCodeLineAnnotation(btn,btn.dataset.codeKey,true)}});
+  });
+}
+function lineExplanation(line){
+  const t=String(line||'').trim();
+  let meaning='这是一条提示词中的执行说明，用来限定 Codex 的理解和输出方式。';
+  let purpose='将复杂任务拆成清楚、可检查的约束，减少智能体自行猜测。';
+  let tip='替换其中的占位符，并确保这条要求能被验收或人工确认。';
+  if(!t){meaning='这是一条空行，用来分隔提示词中的不同指令块。';purpose='提高指令的可读性，使任务结构更清晰。';tip='可在不同阶段、输出格式或风险说明之间保留空行。'}
+  else if(/\{[^}]+\}/.test(t)){meaning='这行包含占位符，花括号内内容需要由你的真实任务信息替换。';purpose='把通用模板变成可复用的专用指令。';tip='发送前替换所有花括号内容，避免 Codex 根据模糊占位符自行猜测。'}
+  else if(/不要|禁止|未得到确认|不执行|暂停/.test(t)){meaning='这是一条限制或审批边界。';purpose='阻止 Codex 在没有明确授权时进行高风险、不可逆或超范围操作。';tip='把真正不可接受的操作写得具体，例如“不得删除数据”“不得连接生产”。'}
+  else if(/验收|测试|验证|构建|lint|build|手测/.test(t)){meaning='这是一条验证要求。';purpose='要求交付不只包含代码，还要有证明结果正确的证据。';tip='最好写明具体命令、成功条件和至少一个失败场景。'}
+  else if(/风险|回滚|审批|确认/.test(t)){meaning='这是一条风险控制要求。';purpose='让智能体在改变真实系统前先说明影响、恢复路径和需要人工决定的事项。';tip='对数据迁移、部署、付费和第三方写入应保留明确审批点。'}
+  else if(/输出|列出|说明|给出|报告/.test(t)){meaning='这是一条输出格式要求。';purpose='让 Codex 用你可快速审阅的结构呈现调查、计划或交付。';tip='指定条目顺序、篇幅和证据格式，可显著减少来回沟通。'}
+  return {meaning,purpose,tip};
+}
+function showCodeLineAnnotation(target,key,locked=false,immediate=false){
+  const line=codeLineRegistry.get(key);if(line===undefined)return;
+  const explain=lineExplanation(line);
+  const payload={kind:'code',line,explain};
+  if(immediate)showAnnotation(target,payload,locked);else scheduleAnnotation(target,payload,locked);
+}
+function annotationHtml(payload){
+  if(payload.kind==='term'){
+    const entry=payload.entry;
+    return `<div class="annotation-kicker">术语批注</div><h3 class="annotation-title"><code>${escapeHtml(payload.term)}</code> · ${escapeHtml(entry.zh)}</h3><div class="annotation-section"><h4>中文翻译</h4><p>${escapeHtml(entry.zh)}</p></div><div class="annotation-section"><h4>概念解释</h4><p>${escapeHtml(entry.concept)}</p></div><div class="annotation-section"><h4>作用 / 功能 / 用途</h4><p>${escapeHtml(entry.use)}</p></div>`;
+  }
+  const x=payload.explain;
+  return `<div class="annotation-kicker">代码 / Prompt 行释义</div><h3 class="annotation-title">这一行在做什么</h3><div class="annotation-line">${escapeHtml(payload.line||'（空行）')}</div><div class="annotation-section"><h4>含义</h4><p>${escapeHtml(x.meaning)}</p></div><div class="annotation-section"><h4>作用 / 功能 / 用途</h4><p>${escapeHtml(x.purpose)}</p></div><div class="annotation-section"><h4>使用提示</h4><p>${escapeHtml(x.tip)}</p></div>`;
+}
+function scheduleAnnotation(target,payload,locked=false){
+  clearTimeout(annotationTimer);clearTimeout(annotationHideTimer);
+  annotationTarget=target;
+  annotationTimer=setTimeout(()=>{if(annotationTarget===target)showAnnotation(target,payload,locked)},2000);
+}
+function showAnnotation(target,payload,locked=false){
+  clearTimeout(annotationTimer);clearTimeout(annotationHideTimer);
+  annotationTarget=target;annotationLocked=locked;
+  annotationPopover.innerHTML=annotationHtml(payload);
+  annotationPopover.classList.add('show');annotationPopover.style.visibility='hidden';
+  requestAnimationFrame(()=>{positionAnnotationPopover(target);annotationPopover.style.visibility='';});
+}
+function scheduleAnnotationHide(target){
+  clearTimeout(annotationTimer);
+  if(annotationLocked)return;
+  annotationHideTimer=setTimeout(()=>{
+    if(!annotationLocked&&!annotationPopover.matches(':hover')&&annotationTarget===target)hideAnnotation();
+  },180);
+}
+function hideAnnotation(force=false){
+  clearTimeout(annotationTimer);clearTimeout(annotationHideTimer);
+  if(annotationLocked&&!force)return;
+  annotationLocked=false;annotationTarget=null;annotationPopover.classList.remove('show');
+}
+function positionAnnotationPopover(target){
+  const r=target.getBoundingClientRect();
+  const w=annotationPopover.offsetWidth,h=annotationPopover.offsetHeight,gap=14,vw=window.innerWidth,vh=window.innerHeight;
+  let placement='right',left=r.right+gap,top=r.top+r.height/2-h/2;
+  const spaceRight=vw-r.right,spaceLeft=r.left,spaceBottom=vh-r.bottom,spaceTop=r.top;
+  if(spaceRight<w+gap&&spaceLeft>=w+gap){placement='left';left=r.left-w-gap;}
+  else if(spaceRight<w+gap&&spaceLeft<w+gap&&spaceBottom>=h+gap){placement='bottom';left=r.left+r.width/2-w/2;top=r.bottom+gap;}
+  else if(spaceRight<w+gap&&spaceLeft<w+gap&&spaceTop>=h+gap){placement='top';left=r.left+r.width/2-w/2;top=r.top-h-gap;}
+  left=Math.max(10,Math.min(vw-w-10,left));top=Math.max(10,Math.min(vh-h-10,top));
+  annotationPopover.dataset.placement=placement;
+  if(placement==='left'||placement==='right')annotationPopover.style.setProperty('--arrow-y',`${Math.max(18,Math.min(h-18,r.top+r.height/2-top))}px`);
+  else annotationPopover.style.setProperty('--arrow-x',`${Math.max(18,Math.min(w-18,r.left+r.width/2-left))}px`);
+  annotationPopover.style.left=`${left}px`;annotationPopover.style.top=`${top}px`;
+}
+annotationPopover.addEventListener('pointerenter',()=>clearTimeout(annotationHideTimer));
+annotationPopover.addEventListener('pointerleave',()=>{if(!annotationLocked)hideAnnotation()});
+document.addEventListener('pointerdown',e=>{if(!annotationPopover.contains(e.target)&&!e.target.closest('.term-token,.code-end-note'))hideAnnotation(true)});
+function syncFloatingControlOverlap(){
+  if(!searchWrap||!toolbarEl)return;
+  const rects=[...nodeEls.values()].map(el=>el.getBoundingClientRect());
+  const overlaps=el=>{const r=el.getBoundingClientRect();return rects.some(n=>n.right>r.left&&n.left<r.right&&n.bottom>r.top&&n.top<r.bottom)};
+  searchWrap.classList.toggle('ui-obscured',overlaps(searchWrap));
+  toolbarEl.classList.toggle('ui-obscured',overlaps(toolbarEl));
+}
+
+function showToast(t){const x=document.getElementById('toast');x.textContent=t;x.classList.add('show');setTimeout(()=>x.classList.remove('show'),1800)}
+
+const activePointers=new Map();
+let pinchState=null;
+function getTwoPointers(){return [...activePointers.values()].slice(0,2)}
+function pointerDistance(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+function pointerMidpoint(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2}}
+function beginPinch(){
+  const [a,b]=getTwoPointers();if(!a||!b)return;
+  const r=canvas.getBoundingClientRect(),mid=pointerMidpoint(a,b);
+  pinchState={distance:Math.max(1,pointerDistance(a,b)),scale,midX:mid.x-r.left,midY:mid.y-r.top,worldX:(mid.x-r.left-pan.x)/scale,worldY:(mid.y-r.top-pan.y)/scale};
+  dragging=false;canvas.classList.remove('dragging');
+}
+canvas.addEventListener('pointerdown',e=>{
+  if(e.target.closest('.node,.toggle-chip,.toolbar,.search-wrap,.sidebar-toggle,.term-token,.code-end-note'))return;
+  if(e.pointerType==='touch')e.preventDefault();
+  activePointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  canvas.setPointerCapture?.(e.pointerId);
+  if(activePointers.size===1){dragging=true;canvas.classList.add('dragging');start={x:e.clientX-pan.x,y:e.clientY-pan.y};pinchState=null;hideAnnotation(true)}
+  else if(activePointers.size===2){beginPinch();hideAnnotation(true)}
+},{passive:false});
+canvas.addEventListener('pointermove',e=>{
+  if(!activePointers.has(e.pointerId))return;
+  if(e.pointerType==='touch')e.preventDefault();
+  activePointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(activePointers.size>=2&&pinchState){
+    const [a,b]=getTwoPointers();const r=canvas.getBoundingClientRect(),mid=pointerMidpoint(a,b);
+    const nextScale=Math.max(.18,Math.min(2.35,pinchState.scale*(pointerDistance(a,b)/pinchState.distance)));
+    scale=nextScale;pan.x=(mid.x-r.left)-pinchState.worldX*scale;pan.y=(mid.y-r.top)-pinchState.worldY*scale;updateTransform();return;
+  }
+  if(!dragging)return;pan.x=e.clientX-start.x;pan.y=e.clientY-start.y;updateTransform();
+},{passive:false});
+function endCanvasPointer(e){
+  activePointers.delete(e.pointerId);
+  if(activePointers.size===1){const [remaining]=activePointers.values();dragging=true;canvas.classList.add('dragging');start={x:remaining.x-pan.x,y:remaining.y-pan.y};pinchState=null}
+  else if(activePointers.size===0){dragging=false;pinchState=null;canvas.classList.remove('dragging')}
+}
+canvas.addEventListener('pointerup',endCanvasPointer);canvas.addEventListener('pointercancel',endCanvasPointer);canvas.addEventListener('lostpointercapture',endCanvasPointer);
+canvas.addEventListener('wheel',e=>{e.preventDefault();const before=scale;scale=Math.max(.18,Math.min(2.35,scale*(e.deltaY<0?1.1:.9)));const r=canvas.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;pan.x=mx-(mx-pan.x)*(scale/before);pan.y=my-(my-pan.y)*(scale/before);updateTransform()},{passive:false});
+canvas.addEventListener('click',e=>{if(e.target===canvas||e.target.id==='viewport'){selected=null;render();detail.innerHTML='<div class="empty">点击节点打开操作卡；在 iPad/iPhone 上可单指拖动画布、双指缩放。<br><br>建议首次按顺序阅读：<br>① 目标与边界 → ② 只读预检与规则 → ③ 执行空间 → ④ 执行与验证 → ⑤ 安全、交付、容器与能力库；<br>之后把它当成每次给 Codex 派活前的检查表。</div>'}});
+
+document.getElementById('zoomIn').onclick=()=>{scale=Math.min(1.45,scale*1.15);updateTransform()};document.getElementById('zoomOut').onclick=()=>{scale=Math.max(.42,scale*.87);updateTransform()};
+document.getElementById('expandAll').onclick=()=>{flat.forEach(n=>n.collapsed=false);render();showToast('已展开全部分支')};
+document.getElementById('collapseAll').onclick=()=>{flat.forEach(n=>{if(n.depth>=1)n.collapsed=true});render();showToast('已收起到一级')};
+const search=document.getElementById('search'),results=document.getElementById('searchResults');
+function doSearch(){const q=search.value.trim().toLowerCase();if(!q){results.classList.remove('show');return}const hits=flat.filter(n=>(n.title+' '+(n.sub||'')+' '+(n.summary||'')).toLowerCase().includes(q)).slice(0,8);results.innerHTML=hits.length?hits.map(n=>`<div class="result" data-id="${n.id}"><span>${escapeHtml(n.title)}</span>${n.sub?' · '+escapeHtml(n.sub):''}</div>`).join(''):'<div class="result">没有匹配节点</div>';results.classList.add('show');results.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>{const n=map.get(el.dataset.id);let p=n.parent;while(p){p.collapsed=false;p=p.parent}search.value='';results.classList.remove('show');selectNode(n)});}
+search.addEventListener('input',doSearch);search.addEventListener('keydown',e=>{if(e.key==='Escape'){search.value='';results.classList.remove('show');search.blur()}});document.addEventListener('keydown',e=>{if(e.key==='/'&&!['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){e.preventDefault();search.focus()}if(e.key==='0'){scale=.57;pan={x:0,y:0};updateTransform()}if(e.key==='Escape')hideAnnotation(true)});
+window.addEventListener('resize',()=>{if(selected)focusNode(selected,true);else updateTransform()});
+render();
+</script>
+
+<script>
+// PWA 离线缓存：仅在 HTTPS 或 localhost 下启用；局域网 HTTP 访问仍可正常使用页面交互。
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js').then(registration => {
+      registration.update().catch(() => {});
+    }).catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
